@@ -205,6 +205,7 @@ void loop()
 **********************************************/
 typedef struct
 {
+  bool printHelp;
   bool initReq;
   bool playTrackReq;
   bool pauseTrackReq;
@@ -226,7 +227,7 @@ typedef struct
   bool otherInfoReq;
 }cmdRequest_s;
 
-cmdRequest_s cmdRequest={false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false};
+cmdRequest_s cmdRequest={false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false};
 
 typedef struct
 {
@@ -237,6 +238,7 @@ typedef struct
 
 const cmdtabRequest_s tabSerialRequest[]=
 {
+  {'h',  &cmdRequest.printHelp,            "PRINTS HELP"},
   {'a',  &cmdRequest.initReq ,             "INIT"},
   {'e',  &cmdRequest.ejectDiscReq ,        "EJECT"},
   {'p',  &cmdRequest.pauseTrackReq ,       "PAUSE"},
@@ -261,6 +263,20 @@ const cmdtabRequest_s tabSerialRequest[]=
 };
 
 const int sizeof_tabcmdRequest = sizeof(tabSerialRequest)/sizeof(cmdtabRequest_s);
+
+void printHelp(void)
+{
+   const cmdtabRequest_s *lcmdRequest;
+   lcmdRequest = tabSerialRequest;
+     
+   while(lcmdRequest->serialCmd!=NULL)
+   {
+    Serial.print(lcmdRequest->serialCmd);
+    Serial.print(" - ");
+    Serial.println(lcmdRequest->printSerialMsg);
+    lcmdRequest++;
+   }
+}
 
 void serialEvent()
 {
@@ -347,7 +363,12 @@ void MCDEmu_Slave_34W515(void)
 void MCDEmu_Generic_Commands(void)
 {
   int returnValue=0;
-  
+
+  if(cmdRequest.printHelp)
+  {
+    cmdRequest.printHelp=false;
+    printHelp();
+  }
   if(cmdRequest.initReq)
   {
     cmdRequest.initReq=false;
