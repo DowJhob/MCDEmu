@@ -20,32 +20,16 @@
 #define HARD_SCK_PIN 13
 */
 
-/*
- * SOFT SPI 
- * 0 - Off
- * 1 - v1 - SoftSPI done in header file
- * 2 - v2 - SoftSPI Library
-*/
-#define SOFTSPI_VERSION 2
-
-#define SOFT_MOSI_PIN 16//7
-#define SOFT_MISO_PIN 17//23
-#define SOFT_SCK_PIN 18//14
+#define SOFT_MOSI_PIN 16
+#define SOFT_MISO_PIN 17
+#define SOFT_SCK_PIN 18
 
 //For debug purposes
-#include <Debug.h>
+//#include <Debug.h>
 #include <SoftwareSerial.h>
 
 // include the SPI library:
 #include <SPI.h>
-// include the soft SPI library:
-#if SOFTSPI_VERSION==1
-#include "softspiv1.h"
-#elif SOFTSPI_VERSION==2
-#include <SoftSPI.h>
-// Create a new SPI port with:
-SoftSPI mySPI(SOFT_MOSI_PIN, SOFT_MISO_PIN, SOFT_SCK_PIN);
-#endif
 
 // set pin 10 as the slave select HWSPI:
 const int _STM = 10;
@@ -64,12 +48,9 @@ const int DDCNT = 21;
 SPISettings settingsHWSPI(250000, LSBFIRST, SPI_MODE3); 
 #define HardSlave_CS _STM
 #define HardMaster_CS STM
-#if SOFTSPI_VERSION==2
-// set up the speed, mode and endianness of each device
-SPISettings settingsSWSPI(250000, LSBFIRST, SPI_MODE3); 
+
 #define SoftMaster_CS _MTS
 #define SoftSlave_CS MTS
-#endif
 
 /**********************************************
 Common Definitions
@@ -158,22 +139,31 @@ Chrysler CD drive (34W539) Receive Definitions
 #define R_34W539_CD_INFO {0xFC,0x10,0x00}
 #define R_34W539_DIRECTORY_SET_PREVIOUS 0xC5
 #define R_34W539_DIRECTORY_SET_NEXT 0xC6
-#define R_34W539_METADATA_DIRECTORY_NAME(x) {0xC7,0x01,0x02,0x02,0x00,0x00,x,0x01}
-#define R_34W539_METADATA_TRACK_NAME(x,y) {0xC7,0x01,0x02,0x05,0x00,0x00,x,y}
-#define R_34W539_METADATA_ARTIST_NAME(x,y) {0xC7,0x01,0x02,0x04,0x00,0x00,x,y}
-#define R_34W539_METADATA_FILE_NAME(x,y) {0xC7,0x01,0x02,0x01,0x00,0x00,x,y}
+#define R_34W539_METADATA_DIRECTORY_NAME(dirN) {0xC7,0x01,0x02,0x02,0x00,0x00,dirN,0x01}
+#define R_34W539_METADATA_TRACK_NAME(dirN,trkN) {0xC7,0x01,0x02,0x05,0x00,0x00,dirN,trkN}
+#define R_34W539_METADATA_ARTIST_NAME(dirN,trkN) {0xC7,0x01,0x02,0x04,0x00,0x00,dirN,trkN}
+#define R_34W539_METADATA_FILE_NAME(dirN,trkN) {0xC7,0x01,0x02,0x01,0x00,0x00,dirN,trkN}
 #define R_34W539_OTHER_INFO {0xC8,0x10,0x00}
 #define R_34W539_UNKNOWN_1 {0xC9,0x01}
 
 int statusR_34W539[10]={0,0,0,0,0,0,0,0,0,0};
 
-const int StartMsgT_34W539[]=R_34W515_UNKNOWN_1ST_MSG;
-const int CdInfoMsgT_34W539=R_34W515_CD_INFO;
+int gCurrentTrack = 0;
+int gCurrentDirecory = 0;
+
+const int CdInfoMsgT_34W539[]=R_34W539_CD_INFO;
+const int PreviousTrkMsgT_34W539[]=R_34W539_PREVIOUS_TRACK;
+const int MetaDirNameMsgT_34W539[]=R_34W539_METADATA_DIRECTORY_NAME(0);
+const int MetaArtNameMsgT_34W539[]=R_34W539_METADATA_TRACK_NAME(0,0);
+const int MetaTrkNameMsgT_34W539[]=R_34W539_METADATA_ARTIST_NAME(0,0);
+const int MetaFileNameMsgT_34W539[]=R_34W539_METADATA_FILE_NAME(0,0);
+const int OtherInfoMsgT_34W539[]=R_34W539_OTHER_INFO;
 
 /**********************************************
 SETUP
 **********************************************/
-void setup() {
+void setup()
+{
   // set the HardSlave_CS as an output:
   pinMode(HardSlave_CS, OUTPUT);
   // set the SoftMaster_CS as an output:
@@ -182,6 +172,10 @@ void setup() {
   pinMode(HardMaster_CS, INPUT);
   // set the SoftSlave_CS as an input:
   pinMode(SoftSlave_CS, INPUT);
+
+  // set the SoftSlave_CS as an input:
+  pinMode(SOFT_MOSI_PIN, OUTPUT);
+
   // set the DDCNT as an output:
   pinMode(DDCNT, OUTPUT);
    // set the _MUTE as an output:
@@ -189,16 +183,11 @@ void setup() {
   // initialize SPI:
   SPI.begin();
 
-#if SOFTSPI_VERSION==2
-  // initialize Software SPI v2:
-  mySPI.begin();
-#endif
-
   //for debug purposes
   Serial.begin(9600);
 
-  digitalWrite(SoftMaster_CS, HIGH); 
-  digitalWrite(SOFT_MOSI_PIN, HIGH);
+  digitalWriteFast(SoftMaster_CS, HIGH); 
+  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
 }
 
 /**********************************************
@@ -217,75 +206,86 @@ void loop()
 typedef struct
 {
   bool initReq;
-  bool playReq;
-  bool pauseReq;
-  bool nextReq;
-  bool prevReq;
-  bool ejectReq;
-  bool cdinfoReq;
-  bool trackinfoReq;
-}commandsRequest_s;
+  bool playTrackReq;
+  bool pauseTrackReq;
+  bool nextTrackReq;
+  bool previousTrackReq;
+  bool nextDirectoryReq;
+  bool previousDirectoryReq;
+  bool ejectDiscReq;
+  bool infoDiscReq;
+  bool infoTrackReq;
+  bool randomEnableReq;
+  bool randomDisableReq;
+  bool fastForwardReq;
+  bool rewindReq;
+  bool metaDirNameReq;
+  bool metaArtNameReq;
+  bool metaTrackNameReq;
+  bool metaFileNameReq;
+  bool otherInfoReq;
+}cmdRequest_s;
 
-commandsRequest_s commandsRequest={false,false,false,false,false,false,false};
+cmdRequest_s cmdRequest={false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false};
+
+typedef struct
+{
+  char serialCmd;
+  bool *cmdRequest;
+  char *printSerialMsg;
+}cmdtabRequest_s;
+
+const cmdtabRequest_s tabSerialRequest[]=
+{
+  {'a',  &cmdRequest.initReq ,             "INIT"},
+  {'e',  &cmdRequest.ejectDiscReq ,        "EJECT"},
+  {'p',  &cmdRequest.pauseTrackReq ,       "PAUSE"},
+  {'P',  &cmdRequest.playTrackReq ,        "PLAY"},
+  {'N',  &cmdRequest.nextTrackReq ,        "NEXT TRACK"},
+  {'n',  &cmdRequest.previousTrackReq ,    "PREVIOUS TRACK"},
+  {'F',  &cmdRequest.fastForwardReq ,      "FAST FORWARD"},
+  {'f',  &cmdRequest.rewindReq ,           "REWIND"},
+  {'I',  &cmdRequest.infoDiscReq ,         "DISC INFO"},
+  {'i',  &cmdRequest.infoTrackReq ,        "TRACK INFO"},
+  {'R',  &cmdRequest.randomEnableReq ,     "RANDOM ON"},
+  {'r',  &cmdRequest.randomDisableReq ,    "RANDOM OFF"},
+  {'w',  &cmdRequest.metaDirNameReq ,      "DIRECTORY NAME"},
+  {'x',  &cmdRequest.metaArtNameReq ,      "ARTIST NAME"},
+  {'c',  &cmdRequest.metaTrackNameReq ,    "TRACK NAME"},
+  {'v',  &cmdRequest.metaFileNameReq ,     "FILE NAME"},
+  {'b',  &cmdRequest.otherInfoReq ,        "OTHER INFO"},
+  {'D',  &cmdRequest.nextDirectoryReq ,    "NEXT DIRECTORY"},
+  {'d',  &cmdRequest.previousDirectoryReq ,"PREVIOUS DIRECTORY"},
+  //always last
+  {NULL,  NULL ,                           "NOT FOUND"}
+};
+
+const int sizeof_tabcmdRequest = sizeof(tabSerialRequest)/sizeof(cmdtabRequest_s);
 
 void serialEvent()
 {
-    do
-    {
-      switch(Serial.read())
-      {
-        case 'i':
-        {
-          commandsRequest.initReq = true;
-          Serial.println("INIT");
-          break;
-        }
-        case 'p':
-        {
-          commandsRequest.pauseReq = true;
-          Serial.println("PAUSE");
-          break;
-        }
-        case 'P':
-        {
-          commandsRequest.playReq = true;
-          Serial.println("PLAY");
-          break;
-        }
-        case 'n':
-        {
-          commandsRequest.nextReq = true;
-          Serial.println("NEXT");
-          break;
-        }
-        case 'c':
-        {
-          commandsRequest.cdinfoReq = true;
-          Serial.println("CD STATUS");
-          break;
-        }
-        case 't':
-        {
-          commandsRequest.trackinfoReq = true;
-          Serial.println("TRACK STATUS");
-          break;
-        }
-        case 'e':
-        {
-          commandsRequest.ejectReq = true;
-          Serial.println("EJECT");
-          break;
-        }
-        default:
-        {
-          Serial.println("NOT A COMMAND");
-          break;
-        }
-      }
-    }
-    while(Serial.read() != -1); 
-}
+  int i;
+  char receivedChar;
+  const cmdtabRequest_s *lcmdRequest;
 
+  receivedChar = Serial.read();
+  lcmdRequest = tabSerialRequest;
+  
+  for(i=0;i<sizeof_tabcmdRequest;i++)
+  {
+    if(lcmdRequest->serialCmd == receivedChar
+    || lcmdRequest->serialCmd == NULL)
+    {
+        Serial.println(lcmdRequest->printSerialMsg);
+        if(lcmdRequest->cmdRequest != NULL)
+        {
+          *lcmdRequest->cmdRequest = true;
+          break;
+        }
+    }
+    lcmdRequest++;
+  }
+}
 
 /**********************************************
 (2) 34W515 Slave protocol emulator
@@ -348,40 +348,146 @@ void MCDEmu_Generic_Commands(void)
 {
   int returnValue=0;
   
-  if(commandsRequest.initReq)
+  if(cmdRequest.initReq)
   {
-    commandsRequest.initReq=false;
-    returnValue = send_34W539(0x55);
+    cmdRequest.initReq=false;
+    returnValue = digitalSWSPIWrite(0x55);
   }
-  if(commandsRequest.playReq)
+  if(cmdRequest.playTrackReq)
   {
-    commandsRequest.playReq=false;
-    returnValue = send_34W539(R_34W539_PLAY);
+    cmdRequest.playTrackReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_PLAY);
   }
-  if(commandsRequest.pauseReq)
+  if(cmdRequest.randomEnableReq)
   {
-    commandsRequest.pauseReq=false;
-    returnValue = send_34W539(R_34W539_STOP);
+    cmdRequest.randomEnableReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_RANDOM_ENABLE);
   }
-  if(commandsRequest.nextReq)
+  if(cmdRequest.randomDisableReq)
   {
-    commandsRequest.nextReq=false;
-    returnValue = send_34W539(R_34W539_NEXT_TRACK);
+    cmdRequest.randomDisableReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_RANDOM_DISABLE);
   }
-  if(commandsRequest.ejectReq)
+  if(cmdRequest.nextDirectoryReq)
   {
-    commandsRequest.ejectReq=false;
-    returnValue = send_34W539(R_34W539_EJECT);
+    cmdRequest.nextDirectoryReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_DIRECTORY_SET_NEXT);
   }
-  if(commandsRequest.cdinfoReq)
+  if(cmdRequest.previousDirectoryReq)
   {
-    commandsRequest.cdinfoReq=false;
-    returnValue = send_34W539(0xAA);
+    cmdRequest.previousDirectoryReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_DIRECTORY_SET_PREVIOUS);
   }
-  if(commandsRequest.trackinfoReq)
+  if(cmdRequest.pauseTrackReq)
   {
-    commandsRequest.trackinfoReq=false;
-    returnValue = send_34W539(R_34W539_EJECT);
+    cmdRequest.pauseTrackReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_STOP);
+  }
+  if(cmdRequest.nextTrackReq)
+  {
+    cmdRequest.nextTrackReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_NEXT_TRACK);
+  }
+  if(cmdRequest.previousTrackReq)
+  {
+    cmdRequest.previousTrackReq=false;
+    returnValue = digitalSWSPIWrite(PreviousTrkMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(PreviousTrkMsgT_34W539[1]);
+  }
+  if(cmdRequest.ejectDiscReq)
+  {
+    cmdRequest.ejectDiscReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_EJECT);
+  }
+  if(cmdRequest.infoDiscReq)
+  {
+    cmdRequest.infoDiscReq=false;
+    returnValue = digitalSWSPIWrite(CdInfoMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(CdInfoMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(CdInfoMsgT_34W539[2]);
+  }
+  if(cmdRequest.infoTrackReq)
+  {
+    cmdRequest.infoTrackReq=false;
+    returnValue = digitalSWSPIWrite(R_34W539_EJECT);
+  }
+  if(cmdRequest.metaDirNameReq)
+  {
+    cmdRequest.metaDirNameReq=false;
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[2]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[3]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[4]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[5]);
+  }
+  if(cmdRequest.metaArtNameReq)
+  {
+    cmdRequest.metaArtNameReq=false;
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[2]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[3]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[4]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[5]);
+  }
+  if(cmdRequest.metaTrackNameReq)
+  {
+    cmdRequest.metaTrackNameReq=false;
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[2]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[3]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[4]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[5]);
+  }
+  if(cmdRequest.metaFileNameReq)
+  {
+    cmdRequest.metaFileNameReq=false;
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[2]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[3]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[4]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[5]);
+  }
+  if(cmdRequest.otherInfoReq)
+  {
+    cmdRequest.otherInfoReq=false;
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[0]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[1]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[2]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[3]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[4]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[5]);
   }
 }
 
@@ -390,96 +496,47 @@ void MCDEmu_Generic_Commands(void)
 **********************************************/
 void MCDEmu_Master_34W539(void)
 {
-  static unsigned long previousMillis = 0;
-  unsigned long currentMillis = millis();
-  long interval = 500;
-  
-  if(currentMillis - previousMillis > interval)
-  {
-    previousMillis = currentMillis;
-    
-    for (int channel = 0; channel < sizeof(StartMsgT_34W539)/sizeof(int); channel++)
-    {
-  #if SOFTSPI_VERSION!=0
-        digitalSWSPIWrite(StartMsgT_34W539[channel]);
-  #endif
-        delayMicroseconds(850);
-    }
-  }
+
 }
 
 /**********************************************
 Software SPI Transfer
 **********************************************/
-#if SOFTSPI_VERSION==1
 int digitalSWSPIWrite(int value)
 {
-  int returnValue;
+  int bitPosition;
   
   // take the SS pin low to select the chip:
-  digitalWrite(SoftMaster_CS, LOW);
-  spi_send(value);
-  // take the SS pin high to de-select the chip:
-  digitalWrite(SoftMaster_CS, HIGH);
-  
-  return returnValue;
-}
-#elif SOFTSPI_VERSION==2
-int digitalSWSPIWrite(int value)
-{
-  int returnValue=0;
-  
-  mySPI.beginTransaction(settingsSWSPI);
-  // take the SS pin low to select the chip:
-  digitalWrite(SoftMaster_CS, LOW);
-  mySPI.transfer(value);
+  digitalWriteFast(SOFT_MOSI_PIN, LOW);
+  delayMicroseconds(1);
+  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+  delayMicroseconds(6);
+  digitalWriteFast(SoftMaster_CS, LOW);
 
-  // force soft SPI to idle high
-  digitalWrite(SOFT_SCK_PIN, HIGH);
-  digitalWrite(SOFT_MOSI_PIN, HIGH);
-  
-  // take the SS pin high to de-select the chip:
-  digitalWrite(SoftMaster_CS, HIGH);
-  mySPI.endTransaction();
-  returnValue =1;
-  
-  return returnValue;
-}
-#endif
-
-int send_34W539(int value)
-{  
-  int returnValue=0;
-  // take the SS pin low to select the chip:
-  digitalWrite(SoftMaster_CS, LOW);
-
-  while(returnValue!=8)
+  for(bitPosition=0;bitPosition<8;bitPosition++)
   {
-    while(digitalRead(SoftSlave_CS));
+    while(digitalReadFast(SoftSlave_CS));
 
-    if(((value & (1<<returnValue))>>returnValue) == 0)
+    if(((value & (1<<bitPosition))>>bitPosition) == 0)
     {
-        digitalWrite(SOFT_MOSI_PIN, LOW);
+        digitalWriteFast(SOFT_MOSI_PIN, LOW);
     }
     else
     {
-        digitalWrite(SOFT_MOSI_PIN, HIGH);
+        digitalWriteFast(SOFT_MOSI_PIN, HIGH);
     }
-    while(!digitalRead(SoftSlave_CS));
-
-    returnValue++;
+    while(!digitalReadFast(SoftSlave_CS));
   }
-  returnValue = 1;
-  
+
   delayMicroseconds(10);
+  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+  delayMicroseconds(890);
   
   // take the SS pin high to de-select the chip:
-  digitalWrite(SoftMaster_CS, HIGH);
-  digitalWrite(SOFT_MOSI_PIN, HIGH);
+  digitalWriteFast(SoftMaster_CS, HIGH);
   
-  return returnValue;
+  return 1;
 }
-
 
 /**********************************************
 Harwdare SPI Transfer

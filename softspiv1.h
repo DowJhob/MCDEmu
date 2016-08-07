@@ -791,7 +791,7 @@ class SoftSPI {
 
 
 void spi_send(uint8_t data) {
-  static SoftSPI<MISO_PIN, MOSI_PIN, SCK_PIN> softSpi;
+  static SoftSPI<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> softSpi;
   static bool initialized = false;
   if (!initialized) {
     initialized = true;
