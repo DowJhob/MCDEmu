@@ -14,16 +14,6 @@
   2016 - johnbutol
 */
 
-/* HW SPI
-#define HARD_MOSI_PIN 11
-#define HARD_MISO_PIN 12
-#define HARD_SCK_PIN 13
-*/
-
-#define SOFT_MOSI_PIN 16
-#define SOFT_MISO_PIN 17
-#define SOFT_SCK_PIN 18
-
 //For debug purposes
 //#include <Debug.h>
 #include <SoftwareSerial.h>
@@ -31,14 +21,21 @@
 // include the SPI library:
 #include <SPI.h>
 
-// set pin 10 as the slave select HWSPI:
-const int _STM = 10;
-// set pin 14 as the master select HWSPI:
-const int STM = 14;
-// set pin 15 as the slave select SWSPI:
-const int _MTS = 15;
-// set pin 19 as the master select SWSPI:
-const int MTS = 19;
+//SPI 34W539
+#define _STM_34W539_CS_PIN 15
+#define DSTM_34W539_MISO_PIN 16
+#define DMTS_34W539_MOSI_PIN 17
+#define _SCK_34W539_CLK_PIN 18
+#define _MTS_34W539_CS_PIN 19
+
+//SPI 34W515
+#define _STM_34W515_CS_PIN 10
+#define DSTM_34W515_MOSI_PIN 11
+#define DMTS_34W515_MISO_PIN 12
+#define _SCK_34W515_CLK_PIN 13
+#define _MTS_34W515_CS_PIN 14
+
+//OTHER SIGNALS
 // set pin 20 as the mute:
 const int _MUTE = 20;
 // set pin 21 as the cd detect:
@@ -46,11 +43,6 @@ const int DDCNT = 21;
 
 // set up the speed, mode and endianness of each device
 SPISettings settingsHWSPI(250000, LSBFIRST, SPI_MODE3); 
-#define HardSlave_CS _STM
-#define HardMaster_CS STM
-
-#define SoftMaster_CS _MTS
-#define SoftSlave_CS MTS
 
 /**********************************************
 Common Definitions
@@ -139,13 +131,14 @@ Chrysler CD drive (34W539) Receive Definitions
 #define R_34W539_CD_INFO {0xFC,0x10,0x00}
 #define R_34W539_DIRECTORY_SET_PREVIOUS 0xC5
 #define R_34W539_DIRECTORY_SET_NEXT 0xC6
-#define R_34W539_METADATA_DIRECTORY_NAME(dirN) {0xC7,0x01,0x02,0x02,0x00,0x00,dirN,0x01}
-#define R_34W539_METADATA_TRACK_NAME(dirN,trkN) {0xC7,0x01,0x02,0x05,0x00,0x00,dirN,trkN}
-#define R_34W539_METADATA_ARTIST_NAME(dirN,trkN) {0xC7,0x01,0x02,0x04,0x00,0x00,dirN,trkN}
-#define R_34W539_METADATA_FILE_NAME(dirN,trkN) {0xC7,0x01,0x02,0x01,0x00,0x00,dirN,trkN}
+#define R_34W539_METADATA 0xC7
+#define R_34W539_METADATA_DIRECTORY_NAME(dirN) {R_34W539_METADATA,0x01,0x02,0x02,0x00,0x00,dirN,0x01}
+#define R_34W539_METADATA_TRACK_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x05,0x00,0x00,dirN,trkN}
+#define R_34W539_METADATA_ARTIST_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x04,0x00,0x00,dirN,trkN}
+#define R_34W539_METADATA_FILE_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x01,0x00,0x00,dirN,trkN}
 #define R_34W539_OTHER_INFO {0xC8,0x10,0x00}
 #define R_34W539_UNKNOWN_1 {0xC9,0x01}
-
+#define R_34W539_DIRECTORY_1 0x03
 int statusR_34W539[10]={0,0,0,0,0,0,0,0,0,0};
 
 int gCurrentTrack = 0;
@@ -153,10 +146,10 @@ int gCurrentDirecory = 0;
 
 const int CdInfoMsgT_34W539[]=R_34W539_CD_INFO;
 const int PreviousTrkMsgT_34W539[]=R_34W539_PREVIOUS_TRACK;
-const int MetaDirNameMsgT_34W539[]=R_34W539_METADATA_DIRECTORY_NAME(0);
-const int MetaArtNameMsgT_34W539[]=R_34W539_METADATA_TRACK_NAME(0,0);
-const int MetaTrkNameMsgT_34W539[]=R_34W539_METADATA_ARTIST_NAME(0,0);
-const int MetaFileNameMsgT_34W539[]=R_34W539_METADATA_FILE_NAME(0,0);
+const int MetaDirNameMsgT_34W539[]=R_34W539_METADATA_DIRECTORY_NAME(R_34W539_DIRECTORY_1);
+const int MetaArtNameMsgT_34W539[]=R_34W539_METADATA_TRACK_NAME(R_34W539_DIRECTORY_1,1);
+const int MetaTrkNameMsgT_34W539[]=R_34W539_METADATA_ARTIST_NAME(R_34W539_DIRECTORY_1,1);
+const int MetaFileNameMsgT_34W539[]=R_34W539_METADATA_FILE_NAME(R_34W539_DIRECTORY_1,1);
 const int OtherInfoMsgT_34W539[]=R_34W539_OTHER_INFO;
 
 /**********************************************
@@ -164,17 +157,19 @@ SETUP
 **********************************************/
 void setup()
 {
-  // set the HardSlave_CS as an output:
-  pinMode(HardSlave_CS, OUTPUT);
-  // set the SoftMaster_CS as an output:
-  pinMode(SoftMaster_CS, OUTPUT);
-  // set the HardMaster_CS as an input:
-  pinMode(HardMaster_CS, INPUT);
-  // set the SoftSlave_CS as an input:
-  pinMode(SoftSlave_CS, INPUT);
+  //34W539
+  pinMode(_MTS_34W539_CS_PIN, OUTPUT);
+  pinMode(DMTS_34W539_MOSI_PIN, OUTPUT);
+  pinMode(_STM_34W539_CS_PIN, INPUT);
+  pinMode(DSTM_34W539_MISO_PIN, INPUT);
+  pinMode(_SCK_34W539_CLK_PIN, INPUT);
 
-  // set the SoftSlave_CS as an input:
-  pinMode(SOFT_MOSI_PIN, OUTPUT);
+  //34W515
+  pinMode(_STM_34W515_CS_PIN, OUTPUT);
+  pinMode(DSTM_34W515_MOSI_PIN, OUTPUT);
+  pinMode(_SCK_34W515_CLK_PIN, OUTPUT);
+  pinMode(_MTS_34W515_CS_PIN, INPUT);
+  pinMode(DMTS_34W515_MISO_PIN, INPUT);
 
   // set the DDCNT as an output:
   pinMode(DDCNT, OUTPUT);
@@ -186,8 +181,8 @@ void setup()
   //for debug purposes
   Serial.begin(9600);
 
-  digitalWriteFast(SoftMaster_CS, HIGH); 
-  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+  digitalWriteFast(_MTS_34W539_CS_PIN, HIGH); 
+  digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
 }
 
 /**********************************************
@@ -313,7 +308,7 @@ bool onReceiveStartMsg_34W515(void)
   bool OnGoingTransmission = false;
   int receivedValue[4] = {0,0,0,0};
   
-  if(!digitalRead(HardSlave_CS))
+  if(0)
   {
     OnGoingTransmission = true;
   }
@@ -323,7 +318,7 @@ bool onReceiveStartMsg_34W515(void)
     for (int channel = 0; channel < sizeof(receivedValue)/sizeof(int); channel++)
     {
       receivedValue[channel] = digitalHWSPIWrite(SLAVE_ACK);
-      while(digitalRead(HardSlave_CS));
+      while(0);
     }
   }
   return(result);
@@ -449,6 +444,10 @@ void MCDEmu_Generic_Commands(void)
     returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[4]);
     delay(16);
     returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[5]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[6]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaDirNameMsgT_34W539[7]);
   }
   if(cmdRequest.metaArtNameReq)
   {
@@ -464,6 +463,10 @@ void MCDEmu_Generic_Commands(void)
     returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[4]);
     delay(16);
     returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[5]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[6]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaArtNameMsgT_34W539[7]);
   }
   if(cmdRequest.metaTrackNameReq)
   {
@@ -479,6 +482,10 @@ void MCDEmu_Generic_Commands(void)
     returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[4]);
     delay(16);
     returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[5]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[6]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaTrkNameMsgT_34W539[7]);
   }
   if(cmdRequest.metaFileNameReq)
   {
@@ -494,6 +501,10 @@ void MCDEmu_Generic_Commands(void)
     returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[4]);
     delay(16);
     returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[5]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[6]);
+    delay(16);
+    returnValue = digitalSWSPIWrite(MetaFileNameMsgT_34W539[7]);
   }
   if(cmdRequest.otherInfoReq)
   {
@@ -503,12 +514,6 @@ void MCDEmu_Generic_Commands(void)
     returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[1]);
     delay(16);
     returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[2]);
-    delay(16);
-    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[3]);
-    delay(16);
-    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[4]);
-    delay(16);
-    returnValue = digitalSWSPIWrite(OtherInfoMsgT_34W539[5]);
   }
 }
 
@@ -526,35 +531,38 @@ Software SPI Transfer
 int digitalSWSPIWrite(int value)
 {
   int bitPosition;
+
+  while(!digitalReadFast(_STM_34W539_CS_PIN));
   
   // take the SS pin low to select the chip:
-  digitalWriteFast(SOFT_MOSI_PIN, LOW);
+/*  digitalWriteFast(DMTS_34W539_MOSI_PIN, LOW);
   delayMicroseconds(1);
-  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+  digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
   delayMicroseconds(6);
-  digitalWriteFast(SoftMaster_CS, LOW);
+*/
+  digitalWriteFast(_MTS_34W539_CS_PIN, LOW);
 
   for(bitPosition=0;bitPosition<8;bitPosition++)
   {
-    while(digitalReadFast(SoftSlave_CS));
+    while(digitalReadFast(_SCK_34W539_CLK_PIN));
 
     if(((value & (1<<bitPosition))>>bitPosition) == 0)
     {
-        digitalWriteFast(SOFT_MOSI_PIN, LOW);
+        digitalWriteFast(DMTS_34W539_MOSI_PIN, LOW);
     }
     else
     {
-        digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+        digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
     }
-    while(!digitalReadFast(SoftSlave_CS));
+    while(!digitalReadFast(_SCK_34W539_CLK_PIN));
   }
 
   delayMicroseconds(10);
-  digitalWriteFast(SOFT_MOSI_PIN, HIGH);
+  digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
   delayMicroseconds(890);
   
   // take the SS pin high to de-select the chip:
-  digitalWriteFast(SoftMaster_CS, HIGH);
+  digitalWriteFast(_MTS_34W539_CS_PIN, HIGH);
   
   return 1;
 }
@@ -568,12 +576,12 @@ int digitalHWSPIWrite(int value)
   
   SPI.beginTransaction(settingsHWSPI);
   // take the SS pin low to select the chip:
-  digitalWrite(HardSlave_CS, LOW);
+  digitalWrite(_STM_34W515_CS_PIN, LOW);
 //  delayMicroseconds(45);
   returnValue = SPI.transfer(value);
 //  delayMicroseconds(60);
   // take the SS pin high to de-select the chip:
-  digitalWrite(HardSlave_CS, HIGH);
+  digitalWrite(_STM_34W515_CS_PIN, HIGH);
   SPI.endTransaction();
   
   return returnValue;
