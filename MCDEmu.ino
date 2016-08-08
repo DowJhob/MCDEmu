@@ -234,8 +234,8 @@ LOOP
 void loop()
 {
 //  MCDEmu_Slave_34W515();
-  MCDEmu_Generic_Commands();
-//  MCDEmu_Master_34W539();
+//  MCDEmu_Generic_Commands();
+  MCDEmu_Master_34W539();
 }
 
 /**********************************************
