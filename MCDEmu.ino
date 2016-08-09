@@ -16,6 +16,7 @@
 
 //For debug purposes
 //#include <Debug.h>
+//#define NDEBUG
 #include <SoftwareSerial.h>
 
 // include the SPI library:
@@ -47,6 +48,7 @@ SPISettings settingsHWSPI(250000, LSBFIRST, SPI_MODE3);
 /**********************************************
 Common Definitions
 **********************************************/
+#define MASTER_ACK 0xDB
 #define SLAVE_ACK 0x5A
 /**********************************************
 CD-P1L (34W515) Transmit Definitions
@@ -116,12 +118,15 @@ Chrysler CD drive (34W539) Transmit Definitions
 
 int statusT_34W539[10]={0,0,0,0,0,0,0,0,0,0};
 
+unsigned char initR_34W539[]=T_34W539_UNKNOWN_1ST_MSG;
+
 /**********************************************
 Chrysler CD drive (34W539) Receive Definitions
 **********************************************/
+#define R_34W539_ACK MASTER_ACK
+
 #define R_34W539_UNKNOWN_1ST_MSG {0x5F,0x01,0x09,0xA0,0x80,0x18}
 #define R_34W539_UNKNOWN_2ND_MSG {0xAD}
-#define R_34W539_ACK 0xDB
 #define R_34W539_EJECT {0xE1}
 #define R_34W539_STOP {0xE2}
 #define R_34W539_PLAY {0xE4}
@@ -196,6 +201,39 @@ const unsigned char sizeofmetaTrackNameT_34W539 = sizeof(metaTrackNameT_34W539)/
 const unsigned char sizeofotherInfo1T_34W539 = sizeof(otherInfo1T_34W539)/sizeof(const unsigned char);
 
 /**********************************************
+DEBUG MACROS
+**********************************************/
+#ifndef __dbg_h__
+#define __dbg_h__
+
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+
+#ifdef NDEBUG
+#define debug(M, ...)
+#else
+#define debug(M, ...) Serial.printf("DEBUG (%u:%s:%d:) " M "\n", millis(), __FILE__, __LINE__, ##__VA_ARGS__)
+#endif
+
+#define clean_errno() (errno == 0 ? "None" : strerror(errno))
+
+#define log_err(M, ...) Serial.printf("[ERROR] (%s:%d: errno: %s) " M "\n", __FILE__, __LINE__, clean_errno(), ##__VA_ARGS__)
+
+#define log_warn(M, ...) Serial.printf("[WARN] (%s:%d: errno: %s) " M "\n", __FILE__, __LINE__, clean_errno(), ##__VA_ARGS__)
+
+#define log_info(M, ...) Serial.printf("[INFO] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
+#define check(A, M, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
+
+#define sentinel(M, ...)  { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
+
+#define check_mem(A) check((A), "Out of memory.")
+
+#define check_debug(A, M, ...) if(!(A)) { debug(M, ##__VA_ARGS__); errno=0; goto error; }
+
+#endif
+/**********************************************
 SETUP
 **********************************************/
 void setup()
@@ -222,7 +260,7 @@ void setup()
   SPI.begin();
 
   //for debug purposes
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   digitalWriteFast(_MTS_34W539_CS_PIN, HIGH); 
   digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
@@ -244,104 +282,179 @@ void loop()
 typedef struct
 {
   bool printHelp;
-  bool initReq;
-  bool playTrackReq;
-  bool pauseTrackReq;
-  bool nextTrackReq;
-  bool previousTrackReq;
-  bool nextDirectoryReq;
-  bool previousDirectoryReq;
-  bool ejectDiscReq;
-  bool infoDiscReq;
-  bool infoTrackReq;
-  bool randomEnableReq;
-  bool randomDisableReq;
-  bool fastForwardReq;
-  bool rewindReq;
-  bool metaDirNameReq;
-  bool metaArtNameReq;
-  bool metaTrackNameReq;
-  bool metaFileNameReq;
-  bool otherInfoReq;
-}cmdRequest_s;
+  bool custom;
+  bool init;
+  bool playTrack;
+  bool pauseTrack;
+  bool nextTrack;
+  bool previousTrack;
+  bool nextDirectory;
+  bool previousDirectory;
+  bool ejectDisc;
+  bool infoDisc;
+  bool infoTrack;
+  bool randomEnable;
+  bool randomDisable;
+  bool fastForward;
+  bool rewind;
+  bool metaDirName;
+  bool metaArtName;
+  bool metaTrackName;
+  bool metaFileName;
+  bool otherInfo;
+}cmdtx_s;
 
-cmdRequest_s cmdRequest = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false};
-char responseSize = 0;
+cmdtx_s cmdtx = {false};
 
 typedef struct
 {
-  char serialCmd;
-  bool *cmdRequest;
-  const char *printSerialMsg;
-}cmdtabRequest_s;
+  bool printHelp;
+  bool init;
+  bool playTrack;
+  bool pauseTrack;
+  bool nextTrack;
+  bool previousTrack;
+  bool nextDirectory;
+  bool previousDirectory;
+  bool ejectDisc;
+  bool infoDisc;
+  bool infoTrack;
+  bool randomEnable;
+  bool randomDisable;
+  bool fastForward;
+  bool rewind;
+  bool metaDirName;
+  bool metaArtName;
+  bool metaTrackName;
+  bool metaFileName;
+  bool otherInfo;
+}cmdrx_s;
 
-const cmdtabRequest_s tabSerialRequest[]=
+cmdrx_s cmdrx = {false};
+
+unsigned char responseSize = 0;
+
+typedef struct
 {
-  {'h',  &cmdRequest.printHelp,            "PRINTS HELP"},
-  {'a',  &cmdRequest.initReq ,             "INIT"},
-  {'e',  &cmdRequest.ejectDiscReq ,        "EJECT"},
-  {'p',  &cmdRequest.pauseTrackReq ,       "PAUSE"},
-  {'P',  &cmdRequest.playTrackReq ,        "PLAY"},
-  {'N',  &cmdRequest.nextTrackReq ,        "NEXT TRACK"},
-  {'n',  &cmdRequest.previousTrackReq ,    "PREVIOUS TRACK"},
-  {'F',  &cmdRequest.fastForwardReq ,      "FAST FORWARD"},
-  {'f',  &cmdRequest.rewindReq ,           "REWIND"},
-  {'I',  &cmdRequest.infoDiscReq ,         "DISC INFO"},
-  {'i',  &cmdRequest.infoTrackReq ,        "TRACK INFO"},
-  {'R',  &cmdRequest.randomEnableReq ,     "RANDOM ON"},
-  {'r',  &cmdRequest.randomDisableReq ,    "RANDOM OFF"},
-  {'w',  &cmdRequest.metaDirNameReq ,      "DIRECTORY NAME"},
-  {'x',  &cmdRequest.metaArtNameReq ,      "ARTIST NAME"},
-  {'c',  &cmdRequest.metaTrackNameReq ,    "TRACK NAME"},
-  {'v',  &cmdRequest.metaFileNameReq ,     "FILE NAME"},
-  {'b',  &cmdRequest.otherInfoReq ,        "OTHER INFO"},
-  {'D',  &cmdRequest.nextDirectoryReq ,    "NEXT DIRECTORY"},
-  {'d',  &cmdRequest.previousDirectoryReq ,"PREVIOUS DIRECTORY"},
-  //always last
-  {NULL,  NULL ,                           "NOT FOUND"}
-};
+  unsigned char cmd;
+  bool *cmdEvent;
+  const char *infoMsg;
+}serialtx_s;
 
-const int sizeof_tabcmdRequest = sizeof(tabSerialRequest)/sizeof(cmdtabRequest_s);
+const serialtx_s serialtx[]=
+{
+  {'h',  &cmdtx.printHelp,         "PRINTS HELP"},
+  {'s',  &cmdtx.custom ,           "CUSTOM CMD"},
+  {'a',  &cmdtx.init ,             "INIT"},
+  {'e',  &cmdtx.ejectDisc ,        "EJECT"},
+  {'p',  &cmdtx.pauseTrack ,       "PAUSE"},
+  {'P',  &cmdtx.playTrack ,        "PLAY"},
+  {'N',  &cmdtx.nextTrack ,        "NEXT TRACK"},
+  {'n',  &cmdtx.previousTrack ,    "PREVIOUS TRACK"},
+  {'F',  &cmdtx.fastForward ,      "FAST FORWARD"},
+  {'f',  &cmdtx.rewind ,           "REWIND"},
+  {'I',  &cmdtx.infoDisc ,         "DISC INFO"},
+  {'i',  &cmdtx.infoTrack ,        "TRACK INFO"},
+  {'R',  &cmdtx.randomEnable ,     "RANDOM ON"},
+  {'r',  &cmdtx.randomDisable ,    "RANDOM OFF"},
+  {'w',  &cmdtx.metaDirName ,      "DIRECTORY NAME"},
+  {'x',  &cmdtx.metaArtName ,      "ARTIST NAME"},
+  {'c',  &cmdtx.metaTrackName ,    "TRACK NAME"},
+  {'v',  &cmdtx.metaFileName ,     "FILE NAME"},
+  {'b',  &cmdtx.otherInfo ,        "OTHER INFO"},
+  {'D',  &cmdtx.nextDirectory ,    "NEXT DIRECTORY"},
+  {'d',  &cmdtx.previousDirectory ,"PREVIOUS DIRECTORY"}
+};
+const unsigned char sizeofserialtx = sizeof(serialtx)/sizeof(serialtx_s);
 
 void printHelp(void)
 {
-   const cmdtabRequest_s *lcmdRequest;
-   lcmdRequest = tabSerialRequest;
-     
-   while(lcmdRequest->serialCmd!=NULL)
-   {
-    Serial.print(lcmdRequest->serialCmd);
-    Serial.print(" - ");
-    Serial.println(lcmdRequest->printSerialMsg);
-    lcmdRequest++;
-   }
+  unsigned char i;
+  const serialtx_s *pserialtx;
+  pserialtx = serialtx;
+
+  for(i=0;i<sizeofserialtx;i++)
+  {
+    Serial.printf("%c - %s\n",pserialtx->cmd,pserialtx->infoMsg);
+    pserialtx++;
+  }
 }
 
 void serialEvent()
 {
-  int i;
-  char receivedChar;
-  const cmdtabRequest_s *lcmdRequest;
-
-  receivedChar = Serial.read();
-  lcmdRequest = tabSerialRequest;
+  unsigned char i;
+  const serialtx_s *pserialtx;
+  pserialtx = serialtx;
+  unsigned char receivedChar = Serial.read();
   
-  for(i=0;i<sizeof_tabcmdRequest;i++)
+  for(i=0;i<sizeofserialtx;i++)
   {
-    if(lcmdRequest->serialCmd == receivedChar
-    || lcmdRequest->serialCmd == NULL)
+    if(pserialtx->cmd == receivedChar)
     {
-        Serial.println(lcmdRequest->printSerialMsg);
-        if(lcmdRequest->cmdRequest != NULL)
+        Serial.println(pserialtx->infoMsg);
+        if(pserialtx->cmdEvent != NULL)
         {
-          *lcmdRequest->cmdRequest = true;
+          *pserialtx->cmdEvent = true;
           break;
         }
     }
-    lcmdRequest++;
+    pserialtx++;
+  }
+  //no known command: empty the receive buffer
+  if(*pserialtx->cmdEvent != true)
+  {
+    Serial.flush();
   }
 }
 
+unsigned char toHex(unsigned char hi, unsigned char lo)
+{
+ unsigned char b;
+ hi = toupper(hi);
+ if( isxdigit(hi) ) {
+   if( hi > '9' ) hi -= 7;      // software offset for A-F
+   hi -= 0x30;                  // subtract ASCII offset
+   b = hi<<4;
+   lo = toupper(lo);
+   if( isxdigit(lo) ) {
+     if( lo > '9' ) lo -= 7;  // software offset for A-F
+     lo -= 0x30;              // subtract ASCII offset
+     b = b + lo;
+     return b;
+   } // else error
+ }  // else error
+ return 0;
+}
+
+bool buildCmd(unsigned char *rbyte)
+{
+  static unsigned char i,hi,lo = 0;
+  static bool hexFound = false;
+
+  if(hexFound == false)
+  {
+    if(i == 0 && *rbyte == '0')i++;
+    else
+    {
+      if(i != 0 && (*rbyte == 'x' || *rbyte == 'X')){ hexFound = true;}
+      i = 0;
+    }
+  }
+  else
+  {
+    if(i == 0){ hi = *rbyte;i++;}
+    else
+    {
+      if(*rbyte == ' ' || *rbyte == '\t') { *rbyte = hi; hi = '0';}
+      lo = *rbyte;
+      *rbyte = toHex(hi,lo);
+      hexFound = false;
+      i = 0;
+      return true;
+    }
+  }
+  return false;
+}
 /**********************************************
 (2) 34W515 Slave protocol emulator
 **********************************************/
@@ -408,134 +521,192 @@ void MCDEmu_Generic_Commands(void)
 /**********************************************
 (4) 34W539 Master protocol emulator
 **********************************************/
-
 typedef struct
 {
-  bool *request;
-  const unsigned char *mesg;
-  unsigned char transmitSize;
-  unsigned char responseSize;
-}transmitMsg_s;
+  bool *cmd;
+  const unsigned char *msg;
+  unsigned char size;
+}Msg_s;
 
-const transmitMsg_s transmitMsg[]=
+const Msg_s txMsg[]=
 {
- //COMMAND LIST                     //MESSAGE TO SEND             //SIZE TO SEND                  //SIZE TO RECEIVE
-  {&cmdRequest.initReq ,             initT_34W539,               sizeofinitT_34W539,               6},
-  {&cmdRequest.ejectDiscReq ,        ejectDiscT_34W539,          sizeofejectDiscT_34W539,          9},
-  {&cmdRequest.pauseTrackReq ,       pauseTrackT_34W539,         sizeofpauseTrackT_34W539,         9},
-  {&cmdRequest.playTrackReq ,        playTrackT_34W539,          sizeofplayTrackT_34W539,          9},
-  {&cmdRequest.nextTrackReq ,        nextTrackT_34W539,          sizeofnextTrackT_34W539,          9},
-  {&cmdRequest.previousTrackReq ,    previousTrackT_34W539,      sizeofpreviousTrackT_34W539,      9},
-  {&cmdRequest.fastForwardReq ,      fastForwardT_34W539,        sizeoffastForwardT_34W539,        9},
-  {&cmdRequest.rewindReq ,           rewindT_34W539,             sizeofrewindT_34W539,             9},  
-  {&cmdRequest.infoDiscReq ,         infoDiscT_34W539,           sizeofinfoDiscT_34W539,           9},
-  {&cmdRequest.infoTrackReq ,        infoTrackT_34W539,          sizeofinfoTrackT_34W539,          9},
-  {&cmdRequest.randomEnableReq ,     randomEnableT_34W539,       sizeofrandomEnableT_34W539,       9},
-  {&cmdRequest.randomDisableReq ,    randomDisableT_34W539,      sizeofrandomDisableT_34W539,      9},
-  {&cmdRequest.metaDirNameReq ,      metaDirNameT_34W539,        sizeofmetaDirNameT_34W539,        25},
-  {&cmdRequest.metaArtNameReq ,      metaArtNameT_34W539,        sizeofmetaArtNameT_34W539,        25},
-  {&cmdRequest.metaTrackNameReq ,    metaTrackNameT_34W539,      sizeofmetaTrackNameT_34W539,      25},
-  {&cmdRequest.metaFileNameReq ,     metaFileNameT_34W539,       sizeofmetaFileNameT_34W539,       25},
-  {&cmdRequest.otherInfoReq ,        otherInfo1T_34W539,         sizeofotherInfo1T_34W539,         9},
-  {&cmdRequest.nextDirectoryReq ,    nextDirectoryT_34W539,      sizeofnextDirectoryT_34W539,      9},
-  {&cmdRequest.previousDirectoryReq, previousDirectoryT_34W539,  sizeofpreviousDirectoryT_34W539,  9},
-  //always last
-  {NULL,NULL,0}
+  //COMMAND LIST             //MESSAGE TO SEND           //SIZE TO SEND
+  {&cmdtx.init ,             initT_34W539,               sizeofinitT_34W539},
+  {&cmdtx.ejectDisc ,        ejectDiscT_34W539,          sizeofejectDiscT_34W539},
+  {&cmdtx.pauseTrack ,       pauseTrackT_34W539,         sizeofpauseTrackT_34W539},
+  {&cmdtx.playTrack ,        playTrackT_34W539,          sizeofplayTrackT_34W539},
+  {&cmdtx.nextTrack ,        nextTrackT_34W539,          sizeofnextTrackT_34W539},
+  {&cmdtx.previousTrack ,    previousTrackT_34W539,      sizeofpreviousTrackT_34W539},
+  {&cmdtx.fastForward ,      fastForwardT_34W539,        sizeoffastForwardT_34W539},
+  {&cmdtx.rewind ,           rewindT_34W539,             sizeofrewindT_34W539},
+  {&cmdtx.infoDisc ,         infoDiscT_34W539,           sizeofinfoDiscT_34W539},
+  {&cmdtx.infoTrack ,        infoTrackT_34W539,          sizeofinfoTrackT_34W539},
+  {&cmdtx.randomEnable ,     randomEnableT_34W539,       sizeofrandomEnableT_34W539},
+  {&cmdtx.randomDisable ,    randomDisableT_34W539,      sizeofrandomDisableT_34W539},
+  {&cmdtx.metaDirName ,      metaDirNameT_34W539,        sizeofmetaDirNameT_34W539},
+  {&cmdtx.metaArtName ,      metaArtNameT_34W539,        sizeofmetaArtNameT_34W539},
+  {&cmdtx.metaTrackName ,    metaTrackNameT_34W539,      sizeofmetaTrackNameT_34W539},
+  {&cmdtx.metaFileName ,     metaFileNameT_34W539,       sizeofmetaFileNameT_34W539},
+  {&cmdtx.otherInfo ,        otherInfo1T_34W539,         sizeofotherInfo1T_34W539},
+  {&cmdtx.nextDirectory ,    nextDirectoryT_34W539,      sizeofnextDirectoryT_34W539},
+  {&cmdtx.previousDirectory, previousDirectoryT_34W539,  sizeofpreviousDirectoryT_34W539}
 };
-
-const unsigned char sizeof_transmitMsg = sizeof(transmitMsg)/sizeof(transmitMsg_s);
-
+const unsigned char sizeoftxMsg = sizeof(txMsg)/sizeof(Msg_s);
+/*
+const Msg_s rxMsg[]=
+{
+  //COMMAND LIST             //MESSAGE TO RECEIVE        //SIZE TO RECEIVE
+  {&cmdrx.init ,             initR_34W539,               sizeofinitT_34W539},
+  {&cmdrx.ejectDisc ,        ejectDiscR_34W539,          sizeofejectDiscT_34W539},
+  {&cmdrx.pauseTrack ,       pauseTrackR_34W539,         sizeofpauseTrackT_34W539},
+  {&cmdrx.playTrack ,        playTrackR_34W539,          sizeofplayTrackT_34W539},
+  {&cmdrx.nextTrack ,        nextTrackR_34W539,          sizeofnextTrackT_34W539},
+  {&cmdrx.previousTrack ,    previousTrackR_34W539,      sizeofpreviousTrackT_34W539},
+  {&cmdrx.fastForward ,      fastForwardR_34W539,        sizeoffastForwardT_34W539},
+  {&cmdrx.rewind ,           rewindR_34W539,             sizeofrewindT_34W539},
+  {&cmdrx.infoDisc ,         infoDiscT_34W539,           sizeofinfoDiscT_34W539},
+  {&cmdrx.infoTrack ,        infoTrackT_34W539,          sizeofinfoTrackT_34W539},
+  {&cmdrx.randomEnable ,     randomEnableT_34W539,       sizeofrandomEnableT_34W539},
+  {&cmdrx.randomDisable ,    randomDisableT_34W539,      sizeofrandomDisableT_34W539},
+  {&cmdrx.metaDirName ,      metaDirNameT_34W539,        sizeofmetaDirNameT_34W539},
+  {&cmdrx.metaArtName ,      metaArtNameT_34W539,        sizeofmetaArtNameT_34W539},
+  {&cmdrx.metaTrackName ,    metaTrackNameT_34W539,      sizeofmetaTrackNameT_34W539},
+  {&cmdrx.metaFileName ,     metaFileNameT_34W539,       sizeofmetaFileNameT_34W539},
+  {&cmdrx.otherInfo ,        otherInfo1T_34W539,         sizeofotherInfo1T_34W539},
+  {&cmdrx.nextDirectory ,    nextDirectoryT_34W539,      sizeofnextDirectoryT_34W539},
+  {&cmdrx.previousDirectory, previousDirectoryT_34W539,  sizeofpreviousDirectoryT_34W539}
+};
+const unsigned char sizeofrxMsg = sizeof(rxMsg)/sizeof(Msg_s);
+*/
 void MCDEmu_Master_34W539(void)
 {
-  unsigned char returnValue=0;
-  unsigned char i;
-  unsigned char byteIndex;
-  unsigned char tabreturnValue[25]={"\0"};
-  const transmitMsg_s * ltransmitMsg;
+  unsigned char receivechar,sendchar;
+  unsigned char lIdx;
+  unsigned char lPosition = 0;
+  const Msg_s *ptxMsg = NULL;
+  unsigned char customCmd[20] = {0};
+  unsigned char customChar;
+  unsigned char i = 0, size = 0;
 
-  ltransmitMsg = transmitMsg;
+  ptxMsg = txMsg;
   
-  if(cmdRequest.printHelp)
+  if(cmdtx.printHelp)
   {
-    cmdRequest.printHelp=false;
+    cmdtx.printHelp = false;
     printHelp();
   }
-  else
+
+  if(cmdtx.custom)
   {
-    for(i=0;i<sizeof_transmitMsg;i++)
+    cmdtx.custom = false;
+    while(Serial.available())
     {
-      if(ltransmitMsg->request != NULL)
+      customChar = Serial.read();
+      if(buildCmd(&customChar))
       {
-        if(*ltransmitMsg->request == true)
+        customCmd[i] = customChar;
+        i++;
+      }
+    }
+    size = i;
+    for(lPosition = 0; lPosition < size; lPosition++)
+    {
+      sendchar = customCmd[lPosition];
+      receivechar = digitalSWSPITransfer(sendchar);
+      // error check
+      if(receivechar != SLAVE_ACK)
+      {
+          debug("tx 0x%02X: Bad response: 0x%02X", sendchar, receivechar);
+          break;
+      }
+      // 2ms between each byte
+      if(lPosition != (size-1))
+      {
+        Serial.printf("0x%02X\t",sendchar);
+        delay(2);
+      }
+      else
+      {
+        Serial.printf("0x%02X\n",sendchar);
+      }
+    }
+  }
+  for(lIdx = 0; lIdx < sizeoftxMsg; lIdx++)
+  {
+    if(*ptxMsg->cmd == true)
+    {
+      *ptxMsg->cmd = false;
+      for(lPosition = 0; lPosition < ptxMsg->size; lPosition++)
+      {
+        sendchar = ptxMsg->msg[lPosition];
+        receivechar = digitalSWSPITransfer(sendchar);
+        // error check
+        if(receivechar != SLAVE_ACK)
         {
-          *ltransmitMsg->request = false;
-          for(byteIndex=0;byteIndex<ltransmitMsg->transmitSize;byteIndex++)
-          {
-            returnValue = digitalSWSPITransfer(ltransmitMsg->mesg[byteIndex]);
-            if(byteIndex != (ltransmitMsg->transmitSize-1))
-            {
-              delay(2);
-            }
-          }
+          debug("tx 0x%02X: Bad response: 0x%02X", sendchar, receivechar);
+          break;
+        }
+        // 2ms between each byte
+        if(lPosition != (ptxMsg->size-1))
+        {
+          delay(2);
         }
       }
-      ltransmitMsg++;
+      break;
     }
+    ptxMsg++;
   }
 
+  // no transmission going on
   if(!digitalReadFast(_STM_34W539_CS_PIN) && responseSize == 0)
   {
- //   responseSize = 6;
+    // we force a read
+   // responseSize = 1;
   }
-  i=responseSize;
-  while(responseSize!=0)
+
+  // read is acknd
+  while(responseSize != 0)
   {
+    sendchar = R_34W539_ACK;
+    receivechar = digitalSWSPITransfer(sendchar);
+    // debug
+    debug("0x%02X ",receivechar);
     responseSize--;
-    returnValue = digitalSWSPITransfer(R_34W539_ACK);
-    if(returnValue < ' ' || returnValue > '}')
-    {
-      Serial.print(returnValue);
-      Serial.print(" ");
-    }
-    else
-    {
-      tabreturnValue[i-responseSize] = returnValue;
-      if(responseSize==0)Serial.print(*tabreturnValue);
-    }
-    if(responseSize==0)Serial.print("\n");
   }
 }
 
 /**********************************************
 Software SPI Transfer
 **********************************************/
-unsigned char digitalSWSPITransfer(unsigned char valuetosend)
+unsigned char digitalSWSPITransfer(unsigned char sendchar)
 {
   unsigned char bitPosition;
-  unsigned char valuetoreceive = 0;
+  unsigned char receivechar = 0;
 
-  if(valuetosend != R_34W539_ACK)
+  if(sendchar == R_34W539_ACK)
   {
-    while(!digitalReadFast(_STM_34W539_CS_PIN));
+    // we just want data back
+    delay(3);
   }
   else
   {
-    while(digitalReadFast(_STM_34W539_CS_PIN));
-    delay(4);
+    // slave can accept transmission
+    while(!digitalReadFast(_STM_34W539_CS_PIN));
   }
 
   // take the SS pin low to select the chip:
   digitalWriteFast(_MTS_34W539_CS_PIN, LOW);
 
-  for(bitPosition=0;bitPosition<8;bitPosition++)
+  for(bitPosition = 0; bitPosition < 8; bitPosition++)
   {
+    // start is done by slave
     while(digitalReadFast(_SCK_34W539_CLK_PIN));
 
-    //READ
-    valuetoreceive |=digitalReadFast(DSTM_34W539_MISO_PIN)<<bitPosition;
+    //read from slave
+    receivechar |= digitalReadFast(DSTM_34W539_MISO_PIN) << bitPosition;
 
-    //WRITE
-    if((valuetosend & (1<<bitPosition)) == 0)
+    //write to slave
+    if((sendchar & (1 << bitPosition)) == 0)
     {
         digitalWriteFast(DMTS_34W539_MOSI_PIN, LOW);
     }
@@ -543,18 +714,19 @@ unsigned char digitalSWSPITransfer(unsigned char valuetosend)
     {
         digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
     }
-
-    while(!digitalReadFast(_SCK_34W539_CLK_PIN));
+    // stop is done by slave
+    while((!digitalReadFast(_SCK_34W539_CLK_PIN)) && (!digitalReadFast(_STM_34W539_CS_PIN)));
   }
 
   delayMicroseconds(10);
+  //reset MOSI pin
   digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
   delayMicroseconds(890);
   
   // take the SS pin high to de-select the chip:
   digitalWriteFast(_MTS_34W539_CS_PIN, HIGH);
 
-  return valuetoreceive;
+  return receivechar;
 }
 
 /**********************************************
@@ -576,4 +748,3 @@ int digitalHWSPIWrite(int value)
   
   return returnValue;
 }
-
