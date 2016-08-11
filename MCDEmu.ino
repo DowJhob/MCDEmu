@@ -1,16 +1,17 @@
 /*
   MCDEmu - Mitsubishi Car CD Drive Emulator and Head Unit Emulator
+  Project page: https://github.com/johnbutol/MCDEmu
 
   Basic Diagram:
   Master HU Volvo (1) <-----34W515 5-wire protocol-----> MCDEmu 34W515 Slave protocol Emulator (2) <-----MCDEmu protocol translator (3)-----> MCDEmu 34W539 Master protocol Emulator (4) <-----34W539 5-wire protocol-----> Slave Chrysler CD drive (5)
-  
+
   Basic usage:
   The goal of this project is to be able to connect a Volvo P1 Chassis head unit (1) (34W515 made by Mitsubishi) with no cdmp3 support to a Chrysler CD Drive (5) (34W539 made by Mitsubishi) with mp3 support, and have a fully flawless working CD MP3 receiver.
   The software below is therefore composed of three parts:
   (2) 34W515 Slave protocol emulator : behaves as a standard 34W515 CD drive for he HU
   (3) Protocol handling : generic layer to connect the pipes
   (4) 34W539 Master protocol emulator : behaves as a standard Chrysler HU for the 34W539 CD drive
-  
+
   2016 - johnbutol
 */
 
@@ -22,19 +23,23 @@
 // include the SPI library:
 #include <SPI.h>
 
+#include "34w539.h"
+#include "34w515.h"
+#include "MCDEmu.h"
+
 //SPI 34W539
-#define _STM_34W539_CS_PIN 15 //A1
-#define DSTM_34W539_MISO_PIN 16 //A2
-#define DMTS_34W539_MOSI_PIN 17 //A3
-#define _SCK_34W539_CLK_PIN 18 //A4
-#define _MTS_34W539_CS_PIN 19 //A5
+#define _STM_34W539_CS_PIN    A1  //15
+#define DSTM_34W539_MISO_PIN  A2  //16
+#define DMTS_34W539_MOSI_PIN  A3  //17
+#define _SCK_34W539_CLK_PIN   A4  //18
+#define _MTS_34W539_CS_PIN    A5  //19
 
 //SPI 34W515
-#define _STM_34W515_CS_PIN SS //10
-#define DSTM_34W515_MOSI_PIN MOSI //11
-#define DMTS_34W515_MISO_PIN MISO //12
-#define _SCK_34W515_CLK_PIN SCK //13
-#define _MTS_34W515_CS_PIN 14 //A0
+#define _STM_34W515_CS_PIN    SS    //10
+#define DSTM_34W515_MOSI_PIN  MOSI  //11
+#define DMTS_34W515_MISO_PIN  MISO  //12
+#define _SCK_34W515_CLK_PIN   SCK   //13
+#define _MTS_34W515_CS_PIN    A0    //14
 
 //OTHER SIGNALS
 // set pin 20 as the mute:
@@ -50,116 +55,11 @@ Common Definitions
 **********************************************/
 #define MASTER_ACK 0xDB
 #define SLAVE_ACK 0x5A
-/**********************************************
-CD-P1L (34W515) Transmit Definitions
-**********************************************/
-#define T_34W515_TRACK_INFO_STOPPED 0x72
-#define T_34W515_TRACK_INFO_LOADING 0x74
-#define T_34W515_TRACK_INFO_NO_CD 0x61
-#define T_34W515_TRACK_INFO_PLAYING 0x64
-#define T_34W515_TRACK_INFO_PAUSED_1 0x7C
-#define T_34W515_TRACK_INFO_PAUSED_2 0x6C
-#define T_34W515_STATE_CHANGE_RESPONSE 0x7A
-#define T_34W515_FAST_FORWARD_RESPONSE_1 0x76
-#define T_34W515_FAST_FORWARD_RESPONSE_2 0x66
-#define T_34W515_REWIND_RESPONSE_1 0x77
-#define T_34W515_REWIND_RESPONSE_2 0x67
-#define T_34W515_EJECT_RESPONSE 0x71
-#define T_34W515_CD_INFO_RESPONSE(nb_tracks,total_time) {0x6E,0x01,nb_tracks,total_time,0x01,0x01}
 
-int statusT_34W515[6]={0,0,0,0,0,0};
-
-/**********************************************
-CD-P1L (34W515) Receive Definitions
-**********************************************/
-#define R_34W515_UNKNOWN_1ST_MSG {0x5F,0x50,0xFE,0x3B}
-#define R_34W515_EJECT 0xE1
-#define R_34W515_STOP 0xE2
-#define R_34W515_PLAY 0xE4
-#define R_34W515_SCAN_DISABLE 0xE4
-#define R_34W515_SCAN_ENABLE 0xE5
-#define R_34W515_FAST_FORWARD 0xE6
-#define R_34W515_REWIND 0xE7
-#define R_34W515_RANDOM_ENABLE 0xEA
-#define R_34W515_PAUSE 0xEC
-#define R_34W515_GOTO_TRACK(track_number) {0xF4,track_number}
-#define R_34W515_ERROR_INFO 0xF7
-#define R_34W515_TRACK_INFO 0xF8
-#define R_34W515_RANDOM_DISABLE 0xFA
-#define R_34W515_CD_INFO 0xFC
-
-int statusR_34W515[6]={0,0,0,0,0,0};
-
-const int StartMsgT_34W515[]=R_34W515_UNKNOWN_1ST_MSG;
-const int CdInfoMsgT_34W515=R_34W515_CD_INFO;
-
-/**********************************************
-Chrysler CD drive (34W539) Transmit Definitions
-**********************************************/
-#define T_34W539_STATUS 0xF8
-#define T_34W539_METADATA 0xFA
-#define T_34W539_UNKNOWN_1ST_MSG {0xF5,0x01,0x09,0xA0,0x80,0x18}
-#define T_34W539_UNKNOWN_2ND_MSG {0xF4,0x00,0x32,0x05,0x05,0x09,0x01,0x0D}
-#define T_34W539_CD_INFO_RESPONSE {0xF2,0x10,0x00,0x05,0x01}
-#define T_34W539_TRACK_INFO_RESPONSE {T_34W539_STATUS,0x25,0x09}
-#define T_34W539_1ST_MESSAGE {T_34W539_STATUS,0x82}
-#define T_34W539_2ND_MESSAGE {T_34W539_STATUS,0x04}
-#define T_34W539_3RD_MESSAGE {T_34W539_STATUS,0x85}
-#define T_34W539_4TH_MESSAGE_STD_CD {T_34W539_STATUS,0xA5,0x09}
-#define T_34W539_4TH_MESSAGE_MP3_CD {T_34W539_STATUS,0x26,0x11}
-#define T_34W539_DIRECTORY_SET_CMD_RESPONSE {T_34W539_STATUS,0xAB}
-#define T_34W539_EJECT_CMD_RESPONSE_1 {T_34W539_STATUS,0xA1}
-#define T_34W539_EJECT_CMD_RESPONSE_2 {T_34W539_STATUS,0x21}
-#define T_34W539_EJECT_CMD_RESPONSE_3 {T_34W539_STATUS,0x01}
-#define T_34W539_STOP_CMD_RESPONSE_1 {T_34W539_STATUS,0xA4}
-#define T_34W539_STOP_CMD_RESPONSE_2 {T_34W539_STATUS,0x24}
-#define T_34W539_ERROR_RESPONSE {0xF9,0x84}
-#define T_34W539_OTHER_INFO_RESPONSE 0xFB
-
-int statusT_34W539[10]={0,0,0,0,0,0,0,0,0,0};
-
-uint8_t initR_34W539[]=T_34W539_UNKNOWN_1ST_MSG;
-
-/**********************************************
-Chrysler CD drive (34W539) Receive Definitions
-**********************************************/
-#define R_34W539_ACK MASTER_ACK
-
-#define R_34W539_UNKNOWN_1ST_MSG {0x5F,0x01,0x09,0xA0,0x80,0x18}
-#define R_34W539_UNKNOWN_2ND_MSG {0xAD}
-#define R_34W539_EJECT {0xE1}
-#define R_34W539_STOP {0xE2}
-#define R_34W539_PLAY {0xE4}
-#define R_34W539_FAST_FORWARD {0xE6,0x02}
-#define R_34W539_REWIND {0xE7,0x02}
-#define R_34W539_NEXT_TRACK {0xEA}
-#define R_34W539_CURRENT_BACK_TRACK {0xEB,0x01}
-#define R_34W539_PREVIOUS_TRACK {0xEB,0x02}
-#define R_34W539_ERROR_STOP {0xF7}
-#define R_34W539_RANDOM_DISABLE {0xF0}
-#define R_34W539_RANDOM_ENABLE {0xFA}
-#define R_34W539_CD_INFO {0xFC,0x10,0x00}
-#define R_34W539_DIRECTORY_SET(dirN) {0xC3,0x00,0x00,dirN,0x01}
-#define R_34W539_DIRECTORY_SET_PREVIOUS {0xC5}
-#define R_34W539_DIRECTORY_SET_NEXT {0xC6}
-#define R_34W539_METADATA 0xC7
-#define R_34W539_METADATA_DIRECTORY_NAME(dirN) {R_34W539_METADATA,0x01,0x02,0x02,0x00,0x00,dirN,0x01}
-#define R_34W539_METADATA_TRACK_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x05,0x00,0x00,dirN,trkN}
-#define R_34W539_METADATA_ARTIST_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x04,0x00,0x00,dirN,trkN}
-#define R_34W539_METADATA_FILE_NAME(dirN,trkN) {R_34W539_METADATA,0x01,0x02,0x01,0x00,0x00,dirN,trkN}
-#define R_34W539_OTHER_INFO_1 {0xC8,0x10,0x00}
-#define R_34W539_OTHER_INFO_2 {0xC8,0x20,0x01}
-#define R_34W539_UNKNOWN_1 {0xC9,0x01}
-#define R_34W539_DIRECTORY_ROOT 0x01
-#define R_34W539_DIRECTORY_1 0x03
-
-int statusR_34W539[10]={0,0,0,0,0,0,0,0,0,0};
-
-int gCurrentTrack = 0;
-int gCurrentDirecory = 0;
+const uint8_t StartMsgT_34W515[]=R_34W515_UNKNOWN_1ST_MSG;
 
 const uint8_t initT_34W539[]=R_34W539_UNKNOWN_1ST_MSG;
-const uint8_t infoDiscT_34W539[]=R_34W539_CD_INFO;
+const uint8_t infoDiskT_34W539[]=R_34W539_CD_INFO;
 const uint8_t previousTrackT_34W539[]=R_34W539_PREVIOUS_TRACK;
 const uint8_t metaDirNameT_34W539[]=R_34W539_METADATA_DIRECTORY_NAME(R_34W539_DIRECTORY_1);
 const uint8_t metaTrackNameT_34W539[]=R_34W539_METADATA_TRACK_NAME(R_34W539_DIRECTORY_1,1);
@@ -171,7 +71,7 @@ const uint8_t pauseTrackT_34W539[]=R_34W539_STOP;
 const uint8_t nextTrackT_34W539[]=R_34W539_NEXT_TRACK;
 const uint8_t nextDirectoryT_34W539[]=R_34W539_DIRECTORY_SET_NEXT;
 const uint8_t previousDirectoryT_34W539[]=R_34W539_DIRECTORY_SET_PREVIOUS;
-const uint8_t ejectDiscT_34W539[]=R_34W539_EJECT;
+const uint8_t ejectDiskT_34W539[]=R_34W539_EJECT;
 const uint8_t infoTrackT_34W539[]=R_34W539_OTHER_INFO_2;
 const uint8_t randomEnableT_34W539[]=R_34W539_RANDOM_ENABLE;
 const uint8_t randomDisableT_34W539[]=R_34W539_RANDOM_DISABLE;
@@ -180,11 +80,11 @@ const uint8_t metaFileNameT_34W539[]=R_34W539_METADATA_FILE_NAME(R_34W539_DIRECT
 const uint8_t rewindT_34W539[]=R_34W539_REWIND;
 
 const uint8_t sizeofinitT_34W539 = sizeof(initT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofinfoDiscT_34W539 = sizeof(infoDiscT_34W539)/sizeof(const uint8_t);
+const uint8_t sizeofinfoDiskT_34W539 = sizeof(infoDiskT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeofpreviousTrackT_34W539 = sizeof(previousTrackT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeofmetaDirNameT_34W539 = sizeof(metaDirNameT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeofinfoTrackT_34W539 = sizeof(infoTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofejectDiscT_34W539 = sizeof(ejectDiscT_34W539)/sizeof(const uint8_t);
+const uint8_t sizeofejectDiskT_34W539 = sizeof(ejectDiskT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeofrandomEnableT_34W539 = sizeof(randomEnableT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeofrandomDisableT_34W539 = sizeof(randomDisableT_34W539)/sizeof(const uint8_t);
 const uint8_t sizeoffastForwardT_34W539 = sizeof(fastForwardT_34W539)/sizeof(const uint8_t);
@@ -213,19 +113,20 @@ DEBUG MACROS
 #include <errno.h>
 #include <string.h>
 
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #ifdef NDEBUG
 #define debug(M, ...)
 #else
-#define debug(M, ...) ((log_verbose == true) ? (Serial.printf("DEBUG (%u:%s:%d:) " M "\n", millis(), __FILE__, __LINE__, ##__VA_ARGS__)) : 0 )
+#define debug(M, ...) ((log_verbose == true) ? (Serial.printf("\nDEBUG (%u:%s:%d:) " M "\n", millis(), __FILENAME__, __LINE__, ##__VA_ARGS__)) : 0 )
 #endif
 
 #define clean_errno() (errno == 0 ? "None" : strerror(errno))
 
-#define log_err(M, ...) Serial.printf("[ERROR] (%s:%d: errno: %s) " M "\n", __FILE__, __LINE__, clean_errno(), ##__VA_ARGS__)
+#define log_err(M, ...) Serial.printf("[ERROR] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
 
-#define log_warn(M, ...) Serial.printf("[WARN] (%s:%d: errno: %s) " M "\n", __FILE__, __LINE__, clean_errno(), ##__VA_ARGS__)
+#define log_warn(M, ...) Serial.printf("[WARN] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
 
-#define log_info(M, ...) Serial.printf("[INFO] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#define log_info(M, ...) Serial.printf("[INFO] (%s:%d) " M "\n", __FILENAME__, __LINE__, ##__VA_ARGS__)
 
 #define check(A, M, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
 
@@ -283,63 +184,7 @@ void loop()
   MCDEmu_Master_34W539();
 }
 
-/**********************************************
- * For debug purposes
-**********************************************/
-typedef struct
-{
-  // internal commands
-  bool printHelp;
-  bool custom;
-  bool debug;
-  // drive commands
-  bool init;
-  bool playTrack;
-  bool pauseTrack;
-  bool nextTrack;
-  bool previousTrack;
-  bool nextDirectory;
-  bool previousDirectory;
-  bool ejectDisc;
-  bool infoDisc;
-  bool infoTrack;
-  bool randomEnable;
-  bool randomDisable;
-  bool fastForward;
-  bool rewind;
-  bool metaDirName;
-  bool metaArtName;
-  bool metaTrackName;
-  bool metaFileName;
-  bool otherInfo;
-}cmdtx_s;
-
 cmdtx_s cmdtx = {false};
-
-typedef struct
-{
-  bool printHelp;
-  bool init;
-  bool playTrack;
-  bool pauseTrack;
-  bool nextTrack;
-  bool previousTrack;
-  bool nextDirectory;
-  bool previousDirectory;
-  bool ejectDisc;
-  bool infoDisc;
-  bool infoTrack;
-  bool randomEnable;
-  bool randomDisable;
-  bool fastForward;
-  bool rewind;
-  bool metaDirName;
-  bool metaArtName;
-  bool metaTrackName;
-  bool metaFileName;
-  bool otherInfo;
-}cmdrx_s;
-
 cmdrx_s cmdrx = {false};
 
 typedef struct
@@ -357,14 +202,14 @@ const serialtx_s serialtx[]=
   {'y',  &cmdtx.debug ,            "VERBOSE"},
   // drive commands
   {'a',  &cmdtx.init ,             "INIT"},
-  {'e',  &cmdtx.ejectDisc ,        "EJECT"},
+  {'e',  &cmdtx.ejectDisk ,        "EJECT"},
   {'p',  &cmdtx.pauseTrack ,       "PAUSE"},
   {'P',  &cmdtx.playTrack ,        "PLAY"},
   {'N',  &cmdtx.nextTrack ,        "NEXT TRACK"},
   {'n',  &cmdtx.previousTrack ,    "PREVIOUS TRACK"},
   {'F',  &cmdtx.fastForward ,      "FAST FORWARD"},
   {'f',  &cmdtx.rewind ,           "REWIND"},
-  {'I',  &cmdtx.infoDisc ,         "DISC INFO"},
+  {'I',  &cmdtx.infoDisk ,         "DISC INFO"},
   {'i',  &cmdtx.infoTrack ,        "TRACK INFO"},
   {'R',  &cmdtx.randomEnable ,     "RANDOM ON"},
   {'r',  &cmdtx.randomDisable ,    "RANDOM OFF"},
@@ -531,25 +376,19 @@ void MCDEmu_Generic_Commands(void)
 /**********************************************
 (4) 34W539 Master protocol emulator
 **********************************************/
-typedef struct
-{
-  bool *cmd;
-  const uint8_t *msg;
-  uint8_t size;
-}Msg_s;
 
 const Msg_s txMsg[]=
 {
   //COMMAND LIST             //MESSAGE TO SEND           //SIZE TO SEND
   {&cmdtx.init ,             initT_34W539,               sizeofinitT_34W539},
-  {&cmdtx.ejectDisc ,        ejectDiscT_34W539,          sizeofejectDiscT_34W539},
+  {&cmdtx.ejectDisk ,        ejectDiskT_34W539,          sizeofejectDiskT_34W539},
   {&cmdtx.pauseTrack ,       pauseTrackT_34W539,         sizeofpauseTrackT_34W539},
   {&cmdtx.playTrack ,        playTrackT_34W539,          sizeofplayTrackT_34W539},
   {&cmdtx.nextTrack ,        nextTrackT_34W539,          sizeofnextTrackT_34W539},
   {&cmdtx.previousTrack ,    previousTrackT_34W539,      sizeofpreviousTrackT_34W539},
   {&cmdtx.fastForward ,      fastForwardT_34W539,        sizeoffastForwardT_34W539},
   {&cmdtx.rewind ,           rewindT_34W539,             sizeofrewindT_34W539},
-  {&cmdtx.infoDisc ,         infoDiscT_34W539,           sizeofinfoDiscT_34W539},
+  {&cmdtx.infoDisk ,         infoDiskT_34W539,           sizeofinfoDiskT_34W539},
   {&cmdtx.infoTrack ,        infoTrackT_34W539,          sizeofinfoTrackT_34W539},
   {&cmdtx.randomEnable ,     randomEnableT_34W539,       sizeofrandomEnableT_34W539},
   {&cmdtx.randomDisable ,    randomDisableT_34W539,      sizeofrandomDisableT_34W539},
@@ -592,47 +431,38 @@ const uint8_t sizeofrxMsg = sizeof(rxMsg)/sizeof(Msg_s);
 #define RECEIVE_FORMAT_RAW 0
 #define RECEIVE_FORMAT_ASCII 1
 
-void MCDEmu_Master_34W539(void)
+bool MCDEmu_Master_34W539_internal_cmd(void)
 {
-  static uint8_t receivesize = 0;
-  static uint8_t receiveformat = RECEIVE_FORMAT_RAW;
-  
-  bool error;
-  uint8_t receivechar,sendchar;
-  uint8_t lIdx;
-  uint8_t lPosition = 0;
-  const Msg_s *ptxMsg = NULL;
-  uint8_t customCmd[20] = {0};
-  uint8_t customChar;
+  bool error = false;
   uint8_t size = 0;
-
-  ptxMsg = txMsg;
+  uint8_t customcmd[20] = {0};
+  uint8_t receivechar,sendchar;
+  uint8_t i;
 
   if(cmdtx.printHelp)
   {
     cmdtx.printHelp = false;
     printHelp();
   }
-
   if(cmdtx.custom)
   {
     cmdtx.custom = false;
     while(Serial.available())
     {
-      customChar = Serial.read();
-      if(buildCmd(&customChar))
+      sendchar = Serial.read();
+      if(buildCmd(&sendchar))
       {
-        customCmd[size] = customChar;
+        customcmd[size] = sendchar;
         size++;
       }
     }
 
-    for(lPosition = 0; lPosition < size; lPosition++)
+    for(i = 0; i < size; i++)
     {
-      sendchar = customCmd[lPosition];
+      sendchar = customcmd[i];
       receivechar = 0;
 
-      error = digitalSWSPITransfer(sendchar,&receivechar);
+      error = digitalSWSPITransfer(sendchar, &receivechar);
       // error check
       if(error == true)
       {
@@ -646,56 +476,68 @@ void MCDEmu_Master_34W539(void)
         break;
       }
       //no error
+      if(i == 0) Serial.printf(">");
       // 2ms between each byte
-      if(lPosition != (size-1))
+      if(i != (size-1))
       {
         delay(2);
-        Serial.printf("0x%02X\t",sendchar);
+        Serial.printf("%d:0x%02X ", i, sendchar);
       }
       else
       {
-        Serial.printf("0x%02X\n",sendchar);
+        Serial.printf("%d:0x%02X\n", i, sendchar);
       }
     }
   }
-
   if(cmdtx.debug)
   {
     cmdtx.debug = false;
     log_verbose = !log_verbose;
+    Serial.printf("<VERBOSE\t %d\n", log_verbose);
   }
+  return error;
+}
 
-  for(lIdx = 0; lIdx < sizeoftxMsg; lIdx++)
+bool MCDEmu_Master_34W539_tx(void)
+{
+  bool error = false;
+  uint8_t i = 0, j = 0;
+  uint8_t receivechar, sendchar;
+  const Msg_s *ptxMsg = NULL;
+
+  ptxMsg = txMsg;
+
+  for(j = 0; j < sizeoftxMsg; j++)
   {
     if(*ptxMsg->cmd == true)
     {
-      for(lPosition = 0; lPosition < ptxMsg->size; lPosition++)
+      for(i = 0; i < ptxMsg->size; i++)
       {
-        sendchar = ptxMsg->msg[lPosition];
+        sendchar = ptxMsg->msg[i];
         receivechar = 0;
 
-        error = digitalSWSPITransfer(sendchar,&receivechar);
+        error = digitalSWSPITransfer(sendchar, &receivechar);
         // error check
-        if(error == true)
+        if(error == true || receivechar != SLAVE_ACK)
         {
           delay(10);
-          break;
-        }
-        else if(receivechar != SLAVE_ACK)
-        {
-          delay(10);
+          if(receivechar != SLAVE_ACK)
           debug("tx 0x%02X: rx: 0x%02X", sendchar, receivechar);
           break;
         }
-        //no error
-        // 2ms between each byte
-        if(lPosition != (ptxMsg->size-1))
+        // no error
+        if(i == 0) Serial.printf(">");
+        // last message
+        if(i != (ptxMsg->size-1))
         {
+          // 2ms between each byte
           delay(2);
+          Serial.printf("%d:0x%02X ", i, sendchar);
         }
         else
         {
           *ptxMsg->cmd = false;
+          Serial.printf("%d:0x%02X\n", i, sendchar);
           break;
         }
       }
@@ -703,64 +545,161 @@ void MCDEmu_Master_34W539(void)
     }
     ptxMsg++;
   }
+  return error;
+}
 
-  // no transmission going on
-  if(!digitalReadFast(_STM_34W539_CS_PIN) && receivesize == 0)
+bool MCDEmu_Master_34W539_rx(void)
+{
+  bool error = false, receiveenable = false;
+  uint8_t receivechar, sendchar;
+  uint8_t receivecnt = 0, receiveformat = RECEIVE_FORMAT_RAW;
+  uint8_t receivedchars[T_34W539_MAX_SIZE_TO_RECEIVE] = {0};
+  static uint8_t receivesize = T_34W539_MAX_SIZE_TO_RECEIVE;
+
+  // no transmission going on and no error from last command
+  if(!digitalReadFast(_STM_34W539_CS_PIN) && error == false)
   {
     // we force a read
-    receivesize = 1;
+    receiveenable = true;
   }
 
-  // read is acknd
-  while(receivesize != 0)
+  while(receiveenable == true)
   {
-    delay(1);
+    // 2ms between each byte
+    delay(2);
+
     sendchar = R_34W539_ACK;
     receivechar = 0;
 
-    error = digitalSWSPITransfer(sendchar,&receivechar);
+    error = digitalSWSPITransfer(sendchar, &receivechar);
 
-    if(receivechar == T_34W539_STATUS)
+   if(error == false)
     {
-      receivesize = 11;
-      receiveformat = RECEIVE_FORMAT_RAW;
-    }
-    else if(receivechar == T_34W539_METADATA)
-    {
-      receivesize = 25;
-      receiveformat = RECEIVE_FORMAT_ASCII;
-    }
+      receivedchars[receivecnt] = receivechar;
 
-    // debug
-    switch(receiveformat)
-    {
-      case RECEIVE_FORMAT_RAW:
+      // This switch is only here to find the size of the received packet
+      switch(receivedchars[T_34W539_BYTE_0_CMD])
       {
-        ((log_verbose == true) ? (Serial.printf("0x%02X ",receivechar)) : 0);
-        break;
+        case T_34W539_CMD_STATUS:
+        {
+          if(receivecnt>0)
+          {
+            if(receivedchars[T_34W539_STATUS_1_BYTE] != (T_34W539_STATUS_1_HIMASK_CD_LOADED | T_34W539_STATUS_1_LOMASK_PLAYING))
+            {
+              if(receivedchars[receivecnt] == T_34W539_CMD_STATUS_END)
+              {
+                if((receivedchars[receivecnt-1] != T_34W539_CMD_STATUS_END)
+                && receivecnt == receivesize)
+                {
+                  receivesize++;
+                }
+                else if(receivedchars[receivecnt-1] == T_34W539_CMD_STATUS_END)
+                {
+                  receivesize = receivecnt;
+                  debug("receivesize %d",receivesize);
+                }
+              }
+            }
+            else
+            {
+              if(receivedchars[T_34W539_STATUS_2_BYTE_CDID_1]==T_34W539_CDID_1_NORMAL_CD)
+              {
+                receivesize = T_34W539_SIZE_NORMAL_CD-1;
+              }
+              else
+              {
+                receivesize = T_34W539_SIZE_MP3_CD-1;
+              }
+            }
+          }
+          break;
+        }
+        case T_34W539_CMD_INFODISK:
+        {
+          receivesize = T_34W539_SIZE_INFODISK-1;
+          break;
+        }
+        case T_34W539_CMD_METADATA:
+        {
+          receivesize = T_34W539_SIZE_METADATA-1;
+
+          if(receivecnt>=T_34W539_METADATA_BYTE_9_CHAR_0)
+          {
+            if(receivecnt == T_34W539_METADATA_BYTE_9_CHAR_0) Serial.printf("<");
+            Serial.printf("%c", receivedchars[receivecnt]);
+            if(receivecnt == receivesize) Serial.printf("\n");
+          }
+          break;
+        }
+        case T_34W539_CMD_UNKNOWN_1:
+        {
+          receivesize = T_34W539_SIZE_UNKNOWN_1ST_MSG-1;
+          break;
+        }
+        case T_34W539_CMD_UNKNOWN_2:
+        {
+          receivesize = T_34W539_SIZE_UNKNOWN_2ND_MSG-1;
+          break;
+        }
       }
-      case RECEIVE_FORMAT_ASCII:
+
+      if(receivecnt == receivesize)
       {
-        ((log_verbose == true) ? (Serial.printf("%c ",receivechar)) : 0);
-        break;        
+        receiveenable = false;
+
+        switch(receiveformat)
+        {
+          case RECEIVE_FORMAT_RAW:
+          {
+            for(receivecnt=0;receivecnt<=receivesize;receivecnt++)
+            {
+              if(receivecnt == 0) ((log_verbose == true) ? (Serial.printf("<")) : 0);
+              ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
+              if(receivecnt == receivesize) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
+            }
+            break;
+          }
+          case RECEIVE_FORMAT_ASCII:
+          {
+            ((log_verbose == true) ? (Serial.printf("%c", receivechar)) : 0);
+            break;
+          }
+        }
+      }
+      else
+      {
+        receivecnt++;
       }
     }
-    receivesize--;
-    if(receivesize == 0) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
+    else
+    {
+      receiveenable = false;
+    }
   }
+  return error;
 }
 
+void MCDEmu_Master_34W539(void)
+{
+  bool error;
+
+  error = MCDEmu_Master_34W539_internal_cmd();
+  if(error == false)
+  error = MCDEmu_Master_34W539_tx();
+  if(error == false)
+  error = MCDEmu_Master_34W539_rx();
+}
 /**********************************************
 Software SPI Transfer
 **********************************************/
 #define TIMEOUT_24MHZ_CS 1000
 #define TIMEOUT_24MHZ_CLK 100
-#define TIMEOUT_48MHZ_CS (TIMEOUT_24MHZ_CS*3)
-#define TIMEOUT_48MHZ_CLK (TIMEOUT_24MHZ_CLK*3)
-#define TIMEOUT_72MHZ_CS (TIMEOUT_48MHZ_CS*2)
-#define TIMEOUT_72MHZ_CLK (TIMEOUT_48MHZ_CLK*2)
-#define TIMEOUT_96MHZ_CS (TIMEOUT_72MHZ_CS*2)
-#define TIMEOUT_96MHZ_CLK (TIMEOUT_72MHZ_CLK*2)
+#define TIMEOUT_48MHZ_CS (TIMEOUT_24MHZ_CS * 3)
+#define TIMEOUT_48MHZ_CLK (TIMEOUT_24MHZ_CLK * 3)
+#define TIMEOUT_72MHZ_CS (TIMEOUT_48MHZ_CS * 2)
+#define TIMEOUT_72MHZ_CLK (TIMEOUT_48MHZ_CLK * 2)
+#define TIMEOUT_96MHZ_CS (TIMEOUT_72MHZ_CS * 2)
+#define TIMEOUT_96MHZ_CLK (TIMEOUT_72MHZ_CLK * 2)
 
 #if F_CPU < 48000000
 #define TIMEOUT_CS TIMEOUT_24MHZ_CS
@@ -785,32 +724,33 @@ inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
 
   // slave can accept transmission
   if(sendchar == R_34W539_ACK)
-  while(digitalReadFast(_STM_34W539_CS_PIN));
+  while(digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs;}
   else
-  while(!digitalReadFast(_STM_34W539_CS_PIN));
-  
+  while(!digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs;}
+
   // take the SS pin low to select the chip:
   digitalWriteFast(_MTS_34W539_CS_PIN, LOW);
 
   if(sendchar == R_34W539_ACK)
-  while(!digitalReadFast(_STM_34W539_CS_PIN)){timeout++;if(timeout>TIMEOUT_CS)goto err_cs;}
+  while(!digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs;}
   else
-  while(digitalReadFast(_STM_34W539_CS_PIN)){timeout++;if(timeout>TIMEOUT_CS)goto err_cs;}
+  while(digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs;}
 
   for(bitPosition = 0; bitPosition < 8; bitPosition++)
   {
-    sbit[bitPosition] = (((sendchar & (1<<bitPosition)) == 0) ? 0 : 1);
+    sbit[bitPosition] = (((sendchar & (1 << bitPosition)) == 0) ? 0 : 1);
   }
+
   for(bitPosition = 0; bitPosition < 8; bitPosition++)
   {
     timeout = 0;
-    while(digitalReadFast(_SCK_34W539_CLK_PIN)){timeout++;if(timeout>TIMEOUT_CLK)goto err_clk_f;}
+    while(digitalReadFast(_SCK_34W539_CLK_PIN)){ timeout++; if(timeout>TIMEOUT_CLK) goto err_clk_f;}
     if(sbit[bitPosition] == 0)
     digitalWriteFast(DMTS_34W539_MOSI_PIN, LOW);
     else
     digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
     timeout = 0;
-    while(!digitalReadFast(_SCK_34W539_CLK_PIN)){timeout++;if(timeout>TIMEOUT_CLK)goto err_clk_r;}
+    while(!digitalReadFast(_SCK_34W539_CLK_PIN)){ timeout++; if(timeout>TIMEOUT_CLK) goto err_clk_r;}
     rbit[bitPosition] = digitalReadFast(DSTM_34W539_MISO_PIN);
   }
   for(bitPosition = 0; bitPosition < 8; bitPosition++)
@@ -832,15 +772,15 @@ inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
   return false;
 
 err_cs:
-  debug("timeout %u err_cs",timeout);
+  debug("timeout %u err_cs", timeout);
   goto err_end;
 
 err_clk_f:
-  debug("timeout %u err_clk_f bitPosition: %d",timeout,bitPosition);
+  debug("timeout %u err_clk_f bitPosition: %d", timeout, bitPosition);
   goto err_end;
 
 err_clk_r:
-  debug("timeout %u err_clk_r bitPosition: %d",timeout,bitPosition);
+  debug("timeout %u err_clk_r bitPosition: %d", timeout, bitPosition);
   goto err_end;
 
 err_end:
@@ -858,12 +798,12 @@ bool digitalHWSPIWrite(uint8_t sendchar, uint8_t *receivechar)
   
   SPI.beginTransaction(settingsHWSPI);
   // take the SS pin low to select the chip:
-  digitalWrite(_STM_34W515_CS_PIN, LOW);
+  digitalWriteFast(_STM_34W515_CS_PIN, LOW);
 //  delayMicroseconds(45);
   *receivechar = SPI.transfer(sendchar);
 //  delayMicroseconds(60);
   // take the SS pin high to de-select the chip:
-  digitalWrite(_STM_34W515_CS_PIN, HIGH);
+  digitalWriteFast(_STM_34W515_CS_PIN, HIGH);
   SPI.endTransaction();
   
   return error;
