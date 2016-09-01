@@ -22,14 +22,16 @@ typedef struct
   // drive commands
   bool init;
   bool playTrack;
+  bool stopTrack;
   bool pauseTrack;
   bool nextTrack;
   bool previousTrack;
   bool nextDirectory;
   bool previousDirectory;
   bool ejectDisk;
-  bool infoDisk;
-  bool infoTrack;
+  bool diskInfo;
+  bool diskStructure;
+  bool folderStructure;
   bool randomEnable;
   bool randomDisable;
   bool fastForward;
@@ -38,7 +40,6 @@ typedef struct
   bool metaArtName;
   bool metaTrackName;
   bool metaFileName;
-  bool otherInfo;
 }cmdtx_s;
 
 typedef struct
