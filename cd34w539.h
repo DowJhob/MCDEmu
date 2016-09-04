@@ -1,6 +1,16 @@
 /*******
 MCDEmu 34W539 header file
 *******/
+#include "Arduino.h"
+#include "MCDEmu.h"
+
+
+//SPI 34W539
+#define _STM_34W539_CS_PIN    A1  //15
+#define DSTM_34W539_MISO_PIN  A2  //16
+#define DMTS_34W539_MOSI_PIN  A3  //17
+#define _SCK_34W539_CLK_PIN   A4  //18
+#define _MTS_34W539_CS_PIN    A5  //19
 
 /**********************************************
 Chrysler CD drive (34W539) Transmit Definitions
@@ -150,3 +160,62 @@ Chrysler CD drive (34W539) Receive Definitions
 #define R_34W539_UNKNOWN_1_MSG {R_34W539_CMD_UNKNOWN_SET_FLDR, 0x01}
 #define R_34W539_DIRECTORY_ROOT 0x01
 #define R_34W539_DIRECTORY_1 0x03
+
+typedef struct
+{
+  // internal commands
+  bool printHelp;
+  bool custom;
+  bool debug;
+  // drive commands
+  bool init;
+  bool playTrack;
+  bool stopTrack;
+  bool pauseTrack;
+  bool nextTrack;
+  bool previousTrack;
+  bool nextDirectory;
+  bool previousDirectory;
+  bool ejectDisk;
+  bool diskInfo;
+  bool diskStructure;
+  bool folderStructure;
+  bool randomEnable;
+  bool randomDisable;
+  bool fastForward;
+  bool rewind;
+  bool metaDirName;
+  bool metaArtName;
+  bool metaTrackName;
+  bool metaFileName;
+}cmdtx34w539_s;
+
+typedef struct
+{
+  bool printHelp;
+  bool init;
+  bool playTrack;
+  bool pauseTrack;
+  bool nextTrack;
+  bool previousTrack;
+  bool nextDirectory;
+  bool previousDirectory;
+  bool ejectDisk;
+  bool infoDisk;
+  bool infoTrack;
+  bool randomEnable;
+  bool randomDisable;
+  bool fastForward;
+  bool rewind;
+  bool metaDirName;
+  bool metaArtName;
+  bool metaTrackName;
+  bool metaFileName;
+  bool otherInfo;
+}cmdrx34w539_s;
+
+
+extern cmdtx34w539_s tx34w539;
+
+bool MCDEmu_master_34W539(void);
+
