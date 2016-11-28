@@ -1,46 +1,46 @@
 #include "cd34w539.h"
 
-const uint8_t initT_34W539[]=R_34W539_UNKNOWN_1ST_MSG;
-const uint8_t diskInfoT_34W539[]=R_34W539_DISKINFO_MSG;
-const uint8_t previousTrackT_34W539[]=R_34W539_PREVIOUS_TRACK_MSG;
-const uint8_t metaDirNameT_34W539[]=R_34W539_METADATA_DIRECTORY_NAME_MSG(R_34W539_DIRECTORY_1);
-const uint8_t metaTrackNameT_34W539[]=R_34W539_METADATA_TRACK_NAME_MSG(0,R_34W539_DIRECTORY_1,1);
-const uint8_t metaArtNameT_34W539[]=R_34W539_METADATA_ARTIST_NAME_MSG(0,R_34W539_DIRECTORY_1,1);
-const uint8_t metaFileNameT_34W539[]=R_34W539_METADATA_FILE_NAME_MSG(0,R_34W539_DIRECTORY_1,1);
-const uint8_t diskStructureT_34W539[]=R_34W539_DISKSTRUCTURE_MSG;
-const uint8_t folderStructureT_34W539[]=R_34W539_FOLDERSTRUCTURE_MSG(1);
-const uint8_t playTrackT_34W539[]=R_34W539_PLAY_MSG;
-const uint8_t stopTrackT_34W539[]=R_34W539_STOP_MSG;
-const uint8_t pauseTrackT_34W539[]=R_34W539_PAUSE_MSG;
-const uint8_t nextTrackT_34W539[]=R_34W539_NEXT_TRACK_MSG;
-const uint8_t nextDirectoryT_34W539[]=R_34W539_DIRECTORY_SET_NEXT_MSG;
-const uint8_t previousDirectoryT_34W539[]=R_34W539_DIRECTORY_SET_PREVIOUS_MSG;
-const uint8_t ejectDiskT_34W539[]=R_34W539_EJECT_MSG;
-const uint8_t randomEnableT_34W539[]=R_34W539_RANDOM_ENABLE_MSG;
-const uint8_t randomDisableT_34W539[]=R_34W539_RANDOM_DISABLE_MSG;
-const uint8_t fastForwardT_34W539[]=R_34W539_FAST_FORWARD_MSG;
-const uint8_t rewindT_34W539[]=R_34W539_REWIND_MSG;
+const uint8_t initT_34W539[] = R_34W539_UNKNOWN_1ST_MSG;
+const uint8_t diskInfoT_34W539[] = R_34W539_DISKINFO_MSG;
+const uint8_t previousTrackT_34W539[] = R_34W539_PREVIOUS_TRACK_MSG;
+const uint8_t metaDirNameT_34W539[] = R_34W539_METADATA_DIRECTORY_NAME_MSG(R_34W539_DIRECTORY_1);
+const uint8_t metaTrackNameT_34W539[] = R_34W539_METADATA_TRACK_NAME_MSG(0, R_34W539_DIRECTORY_1, 1);
+const uint8_t metaArtNameT_34W539[] = R_34W539_METADATA_ARTIST_NAME_MSG(0, R_34W539_DIRECTORY_1, 1);
+const uint8_t metaFileNameT_34W539[] = R_34W539_METADATA_FILE_NAME_MSG(0, R_34W539_DIRECTORY_1, 1);
+const uint8_t diskStructureT_34W539[] = R_34W539_DISKSTRUCTURE_MSG;
+const uint8_t folderStructureT_34W539[] = R_34W539_FOLDERSTRUCTURE_MSG(1);
+const uint8_t playTrackT_34W539[] = R_34W539_PLAY_MSG;
+const uint8_t stopTrackT_34W539[] = R_34W539_STOP_MSG;
+const uint8_t pauseTrackT_34W539[] = R_34W539_PAUSE_MSG;
+const uint8_t nextTrackT_34W539[] = R_34W539_NEXT_TRACK_MSG;
+const uint8_t nextDirectoryT_34W539[] = R_34W539_DIRECTORY_SET_NEXT_MSG;
+const uint8_t previousDirectoryT_34W539[] = R_34W539_DIRECTORY_SET_PREVIOUS_MSG;
+const uint8_t ejectDiskT_34W539[] = R_34W539_EJECT_MSG;
+const uint8_t randomEnableT_34W539[] = R_34W539_RANDOM_ENABLE_MSG;
+const uint8_t randomDisableT_34W539[] = R_34W539_RANDOM_DISABLE_MSG;
+const uint8_t fastForwardT_34W539[] = R_34W539_FAST_FORWARD_MSG;
+const uint8_t rewindT_34W539[] = R_34W539_REWIND_MSG;
 
-const uint8_t sizeofinitT_34W539 = sizeof(initT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofdiskInfoT_34W539 = sizeof(diskInfoT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofdiskStructureT_34W539 = sizeof(diskStructureT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeoffolderStructureT_34W539 = sizeof(folderStructureT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofpreviousTrackT_34W539 = sizeof(previousTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofmetaDirNameT_34W539 = sizeof(metaDirNameT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofejectDiskT_34W539 = sizeof(ejectDiskT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofrandomEnableT_34W539 = sizeof(randomEnableT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofrandomDisableT_34W539 = sizeof(randomDisableT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeoffastForwardT_34W539 = sizeof(fastForwardT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofrewindT_34W539 = sizeof(rewindT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofpreviousDirectoryT_34W539 = sizeof(previousDirectoryT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofnextDirectoryT_34W539 = sizeof(nextDirectoryT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofnextTrackT_34W539 = sizeof(nextTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofpauseTrackT_34W539 = sizeof(pauseTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofstopTrackT_34W539 = sizeof(stopTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofmetaFileNameT_34W539 = sizeof(metaFileNameT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofplayTrackT_34W539 = sizeof(playTrackT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofmetaArtNameT_34W539 = sizeof(metaArtNameT_34W539)/sizeof(const uint8_t);
-const uint8_t sizeofmetaTrackNameT_34W539 = sizeof(metaTrackNameT_34W539)/sizeof(const uint8_t);
+const uint8_t sizeofinitT_34W539 = sizeof(initT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofdiskInfoT_34W539 = sizeof(diskInfoT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofdiskStructureT_34W539 = sizeof(diskStructureT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeoffolderStructureT_34W539 = sizeof(folderStructureT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofpreviousTrackT_34W539 = sizeof(previousTrackT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofmetaDirNameT_34W539 = sizeof(metaDirNameT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofejectDiskT_34W539 = sizeof(ejectDiskT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofrandomEnableT_34W539 = sizeof(randomEnableT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofrandomDisableT_34W539 = sizeof(randomDisableT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeoffastForwardT_34W539 = sizeof(fastForwardT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofrewindT_34W539 = sizeof(rewindT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofpreviousDirectoryT_34W539 = sizeof(previousDirectoryT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofnextDirectoryT_34W539 = sizeof(nextDirectoryT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofnextTrackT_34W539 = sizeof(nextTrackT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofpauseTrackT_34W539 = sizeof(pauseTrackT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofstopTrackT_34W539 = sizeof(stopTrackT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofmetaFileNameT_34W539 = sizeof(metaFileNameT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofplayTrackT_34W539 = sizeof(playTrackT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofmetaArtNameT_34W539 = sizeof(metaArtNameT_34W539) / sizeof(const uint8_t);
+const uint8_t sizeofmetaTrackNameT_34W539 = sizeof(metaTrackNameT_34W539) / sizeof(const uint8_t);
 
 cmdtx34w539_s tx34w539 = {false};
 
@@ -127,7 +127,7 @@ bool MCDEmu_master_34W539_tx(void)
   return error;
 }
 
-bool MCDEmu_master_34W539_status_update(unsigned char *receivedchars)
+bool MCDEmu_master_34W539_status_update(uint8_t *receivedchars)
 {
   bool error = false;
   uint8_t i = 0;

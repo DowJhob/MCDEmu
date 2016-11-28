@@ -1,39 +1,37 @@
 #include "cd34w515.h"
 
-const uint8_t initT_34W515[]=R_34W515_UNKNOWN_1ST_MSG;
-const uint8_t diskInfoT_34W515[]=R_34W515_DISKINFO_MSG;
-const uint8_t previousTrackT_34W515[]=R_34W515_GOTO_TRACK_MSG(2);
-const uint8_t diskStructureT_34W515[]=R_34W515_TRACK_INFO_MSG;
-const uint8_t folderStructureT_34W515[]=R_34W515_ERROR_INFO_MSG;
-const uint8_t playTrackT_34W515[]=R_34W515_PLAY_MSG;
-const uint8_t stopTrackT_34W515[]=R_34W515_STOP_MSG;
-const uint8_t pauseTrackT_34W515[]=R_34W515_PAUSE_MSG;
-const uint8_t nextTrackT_34W515[]=R_34W515_GOTO_TRACK_MSG(3);
-const uint8_t ejectDiskT_34W515[]=R_34W515_EJECT_MSG;
-const uint8_t randomEnableT_34W515[]=R_34W515_RANDOM_ENABLE_MSG;
-const uint8_t randomDisableT_34W515[]=R_34W515_RANDOM_DISABLE_MSG;
-const uint8_t fastForwardT_34W515[]=R_34W515_FAST_FORWARD_MSG;
-const uint8_t rewindT_34W515[]=R_34W515_REWIND_MSG;
+const uint8_t initT_34W515[] = R_34W515_UNKNOWN_1ST_MSG;
+const uint8_t diskInfoT_34W515[] = R_34W515_DISKINFO_MSG;
+const uint8_t previousTrackT_34W515[] = R_34W515_GOTO_TRACK_MSG(2);
+const uint8_t diskStructureT_34W515[] = R_34W515_TRACK_INFO_MSG;
+const uint8_t folderStructureT_34W515[] = R_34W515_ERROR_INFO_MSG;
+const uint8_t playTrackT_34W515[] = R_34W515_PLAY_MSG;
+const uint8_t stopTrackT_34W515[] = R_34W515_STOP_MSG;
+const uint8_t pauseTrackT_34W515[] = R_34W515_PAUSE_MSG;
+const uint8_t nextTrackT_34W515[] = R_34W515_GOTO_TRACK_MSG(3);
+const uint8_t ejectDiskT_34W515[] = R_34W515_EJECT_MSG;
+const uint8_t randomEnableT_34W515[] = R_34W515_RANDOM_ENABLE_MSG;
+const uint8_t randomDisableT_34W515[] = R_34W515_RANDOM_DISABLE_MSG;
+const uint8_t fastForwardT_34W515[] = R_34W515_FAST_FORWARD_MSG;
+const uint8_t rewindT_34W515[] = R_34W515_REWIND_MSG;
 
-const uint8_t sizeofinitT_34W515 = sizeof(initT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofdiskInfoT_34W515 = sizeof(diskInfoT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofdiskStructureT_34W515 = sizeof(diskStructureT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeoffolderStructureT_34W515 = sizeof(folderStructureT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofpreviousTrackT_34W515 = sizeof(previousTrackT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofejectDiskT_34W515 = sizeof(ejectDiskT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofrandomEnableT_34W515 = sizeof(randomEnableT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofrandomDisableT_34W515 = sizeof(randomDisableT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeoffastForwardT_34W515 = sizeof(fastForwardT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofrewindT_34W515 = sizeof(rewindT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofnextTrackT_34W515 = sizeof(nextTrackT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofpauseTrackT_34W515 = sizeof(pauseTrackT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofstopTrackT_34W515 = sizeof(stopTrackT_34W515)/sizeof(const uint8_t);
-const uint8_t sizeofplayTrackT_34W515 = sizeof(playTrackT_34W515)/sizeof(const uint8_t);
+const uint8_t sizeofinitT_34W515 = sizeof(initT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofdiskInfoT_34W515 = sizeof(diskInfoT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofdiskStructureT_34W515 = sizeof(diskStructureT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeoffolderStructureT_34W515 = sizeof(folderStructureT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofpreviousTrackT_34W515 = sizeof(previousTrackT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofejectDiskT_34W515 = sizeof(ejectDiskT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofrandomEnableT_34W515 = sizeof(randomEnableT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofrandomDisableT_34W515 = sizeof(randomDisableT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeoffastForwardT_34W515 = sizeof(fastForwardT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofrewindT_34W515 = sizeof(rewindT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofnextTrackT_34W515 = sizeof(nextTrackT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofpauseTrackT_34W515 = sizeof(pauseTrackT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofstopTrackT_34W515 = sizeof(stopTrackT_34W515) / sizeof(const uint8_t);
+const uint8_t sizeofplayTrackT_34W515 = sizeof(playTrackT_34W515) / sizeof(const uint8_t);
 
 cmdtx34w515_s tx34w515 = {false};
 cmdrx34w515_s rx34w515 = {false};
-
-bool digitalHWSPIWrite(uint8_t sendchar, uint8_t *receivechar);
 
 /**********************************************
 (2) 34W515 Slave protocol emulator
@@ -162,15 +160,12 @@ bool MCDEmu_master_34W515_tx(void)
   return error;
 }
 
-  //debug spi
-#ifdef DEBUG_515
 bool MCDEmu_master_34W515_rx(void)
 {
   bool error = false, receiveenable = false;
   uint8_t receivechar;
   uint8_t receivecnt = 0;
   uint8_t receivedchars[T_34W515_MAX_SIZE_TO_RECEIVE] = {0};
-  static uint8_t receivesize = T_34W515_MAX_SIZE_TO_RECEIVE;
 
   // no transmission going on and no error from last command
   if(!digitalReadFast(_STM_34W515_CS_PIN) && error == false)
@@ -192,85 +187,14 @@ bool MCDEmu_master_34W515_rx(void)
     {
       receivedchars[receivecnt] = receivechar;
 
-      // This switch is only here to find the size of the received packet
-      switch(receivedchars[T_34W515_BYTE_0_CMD])
-      {
-        case T_34W515_CMD_STATUS:
-        {
-          if(receivecnt > 0)
-          {
-            //we can guess the size with the double 0xCC mark at the end of a frame here
-            if(receivedchars[T_34W515_STATUS_1_BYTE] != (T_34W515_STATUS_1_HIMASK_CD_LOADED | T_34W515_STATUS_1_LOMASK_PLAYING))
-            {
-              if(receivedchars[receivecnt] == T_34W515_CMD_STATUS_END)
-              {
-                if(receivedchars[receivecnt - 1] == T_34W515_CMD_STATUS_END) receivesize = receivecnt;
-                else if((receivedchars[receivecnt - 1] != T_34W515_CMD_STATUS_END) && receivecnt == receivesize) receivesize++;
-              }
-            }
-            else
-            {
-              if(receivedchars[T_34W515_STATUS_2_BYTE_CDID_1] == T_34W515_CDID_1_NORMAL_CD) receivesize = T_34W515_SIZE_NORMAL_CD - 1;
-              else receivesize = T_34W515_SIZE_MP3_CD - 1;
-            }
-          }
-          break;
-        }
-        case T_34W515_CMD_DISKINFO:
-        {
-          receivesize = T_34W515_SIZE_DISKINFO - 1;
-          break;
-        }
-        case T_34W515_CMD_METADATA:
-        {
-          if(receivecnt > 0)
-          {
-            if(receivedchars[T_34W515_STATUS_1_BYTE] != T_34W515_METADATA_DATA_EXIST) receivesize = T_34W515_SIZE_METADATA_NOK - 1;
-            else receivesize = T_34W515_SIZE_METADATA_OK - 1;
-          }
-
-          if(receivecnt >= T_34W515_METADATA_BYTE_9_CHAR_0)
-          {
-            if(receivecnt == T_34W515_METADATA_BYTE_9_CHAR_0) Serial.printf("<");
-            Serial.printf("%c", receivedchars[receivecnt]);
-            if(receivecnt == receivesize) Serial.printf("\n");
-          }
-          if(receivesize == T_34W515_SIZE_METADATA_NOK - 1)
-          {
-            Serial.printf("<NO METADATA\n");
-          }
-          break;
-        }
-        case T_34W515_CMD_UNKNOWN_1:
-        {
-          receivesize = T_34W515_SIZE_UNKNOWN_1ST_MSG - 1;
-          break;
-        }
-        case T_34W515_CMD_UNKNOWN_2:
-        {
-          receivesize = T_34W515_SIZE_UNKNOWN_2ND_MSG - 1;
-          break;
-        }
-        case T_34W515_CMD_DISK_STRUCTURE:
-        {
-          receivesize = T_34W515_SIZE_DISK_STRUCTURE - 1;
-          break;
-        }
-        case T_34W515_CMD_ERROR:
-        {
-          receivesize = T_34W515_SIZE_UNKNOWN_1 - 1;
-          break;
-        }
-      }
-
-      if(receivecnt == receivesize)
+      if(receivecnt == T_34W515_MAX_SIZE_TO_RECEIVE)
       {
         receiveenable = false;
-        for(receivecnt = 0; receivecnt <= receivesize; receivecnt++)
+        for(receivecnt = 0; receivecnt <= T_34W515_MAX_SIZE_TO_RECEIVE; receivecnt++)
         {
           if(receivecnt == 0) ((log_verbose == true) ? (Serial.printf("<")) : 0);
           ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
-          if(receivecnt == receivesize) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
+          if(receivecnt == T_34W515_MAX_SIZE_TO_RECEIVE) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
         }
       }
       else
@@ -286,10 +210,7 @@ bool MCDEmu_master_34W515_rx(void)
   }
   return error;
 }
-#endif
 
-//debug spi
-#ifdef DEBUG_515
 bool MCDEmu_master_34W515(void)
 {
   bool error;
@@ -300,5 +221,4 @@ bool MCDEmu_master_34W515(void)
 
   return error;
 }
-#endif
 

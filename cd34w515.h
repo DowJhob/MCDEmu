@@ -21,7 +21,7 @@ MCDEmu 34W515 header file
 #define _MTS_34W515_CS_PIN    A0    //14
 #endif
 
-#define R_34W515_ACK 0x74
+#define R_34W515_ACK MASTER_ACK
 
 /**********************************************
 CD-P1L (34W515) Transmit Definitions
@@ -62,7 +62,7 @@ CD-P1L (34W515) Receive Definitions
 #define R_34W515_RANDOM_DISABLE_MSG {0xFA}
 #define R_34W515_DISKINFO_MSG {0xFC}
 
-#define T_34W515_MAX_SIZE_TO_RECEIVE      30
+#define T_34W515_MAX_SIZE_TO_RECEIVE      6
 
 typedef struct
 {
@@ -112,4 +112,5 @@ extern cmdtx34w515_s tx34w515;
 extern cmdrx34w515_s rx34w515;
 
 bool MCDEmu_slave_34W515(void);
+bool MCDEmu_master_34W515(void);
 

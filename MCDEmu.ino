@@ -109,6 +109,7 @@ void setup()
 
   delay(1000);
 
+  printVersion();
   printHelp();
 }
 
@@ -118,12 +119,22 @@ LOOP
 void loop()
 {
   bool error = false;
-
+#ifdef DEBUG_515
+  error = MCDEmu_master_34W515();
+#else
   error = MCDEmu_slave_34W515();
+#endif
   if(error == false)
   error = MCDEmu_generic_commands();
   if(error == false)
   error = MCDEmu_master_34W539();
+}
+
+const char compile_date[] = __DATE__ " " __TIME__;
+
+void printVersion(void)
+{
+  Serial.printf("MCDEmu - %s\n", compile_date);
 }
 
 const serialtx_s serialtxcommon[]=
@@ -132,7 +143,7 @@ const serialtx_s serialtxcommon[]=
   {'h',  &tx34w539.printHelp ,        "PRINTS HELP"},
   {'s',  &tx34w539.custom ,           "CUSTOM CMD (\"s 0xAA 0xBB 0xCC...\")"},
   {'y',  &tx34w539.debug ,            "VERBOSE"},
-  {NULL}
+  {0}
 };
 
 const serialtx_s serialtx34w539[]=
@@ -158,7 +169,7 @@ const serialtx_s serialtx34w539[]=
   {'b',  &tx34w539.folderStructure ,  "FOLDER STRUCTURE"},
   {'D',  &tx34w539.nextDirectory ,    "NEXT DIRECTORY"},
   {'d',  &tx34w539.previousDirectory ,"PREVIOUS DIRECTORY"},
-  {NULL}
+  {0}
 };
 
 const serialtx_s serialtx34w515[]=
@@ -175,9 +186,10 @@ const serialtx_s serialtx34w515[]=
   {'f',  &tx34w515.rewind ,           "REWIND"},
   {'I',  &tx34w515.diskInfo ,         "DISK INFO"},
   {'i',  &tx34w515.diskStructure ,    "DISK STRUCTURE"},
+  {'i',  &tx34w515.folderStructure,   "ERROR INFO"},
   {'R',  &tx34w515.randomEnable ,     "RANDOM ON"},
   {'r',  &tx34w515.randomDisable ,    "RANDOM OFF"},
-  {NULL}
+  {0}
 };
 
 const serialtx_s serialrx34w515[]=
@@ -196,7 +208,7 @@ const serialtx_s serialrx34w515[]=
   {'i',  &rx34w515.diskStructure ,    "DISK STRUCTURE"},
   {'R',  &rx34w515.randomEnable ,     "RANDOM ON"},
   {'r',  &rx34w515.randomDisable ,    "RANDOM OFF"},
-  {NULL}
+  {0}
 };
 
 typedef struct
@@ -234,7 +246,7 @@ void printHelp(void)
     {
       Serial.printf("%c - %s\n", pserialtx->cmd, pserialtx->infoMsg);
       pserialtx++;
-      if(pserialtx->cmd == NULL) break;
+      if(pserialtx->cmd == 0) break;
     }
     pserialtabletop++;
     pserialtx = pserialtabletop->tableptr;
@@ -264,7 +276,7 @@ void serialEvent()
           }
       }
       pserialtx++;
-      if(pserialtx->cmd == NULL) break;
+      if(pserialtx->cmd == 0) break;
     }
     pserialtabletop++;
     pserialtx = pserialtabletop->tableptr;
@@ -434,7 +446,7 @@ Software SPI Transfer
 #define TIMEOUT_CLK TIMEOUT_96MHZ_CLK
 #endif
 
-inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
+bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
 {
   uint8_t i = 0;
   uint8_t sbit[8] = {0};
@@ -442,7 +454,7 @@ inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
   uint32_t timeout = 0;
 
   // slave can accept transmission
-  if(sendchar == R_34W539_ACK)
+  if(sendchar == MASTER_ACK)
   while(digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs_pre;}
   else
   while(!digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs_pre;}
@@ -452,7 +464,7 @@ inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
 
   timeout = 0;
 
-  if(sendchar == R_34W539_ACK)
+  if(sendchar == MASTER_ACK)
   while(!digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs_post;}
   else
   while(digitalReadFast(_STM_34W539_CS_PIN)){ timeout++; if(timeout>TIMEOUT_CS) goto err_cs_post;}
@@ -482,7 +494,7 @@ inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
   delayMicroseconds(10);
   //reset MOSI pin
   digitalWriteFast(DMTS_34W539_MOSI_PIN, HIGH);
-  if(sendchar == R_34W539_ACK)
+  if(sendchar == MASTER_ACK)
   delayMicroseconds(50);
   else
   delayMicroseconds(890);
@@ -514,7 +526,6 @@ err_end:
   return true;
 }
 
-
 /**********************************************
 Harwdare SPI Transfer
 **********************************************/
@@ -534,5 +545,4 @@ bool digitalHWSPIWrite(uint8_t sendchar, uint8_t *receivechar)
 
   return error;
 }
-
 

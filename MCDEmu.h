@@ -11,36 +11,40 @@ MCDEmu header file
 
 extern bool log_verbose;
 
+#ifndef uint8_t
+typedef unsigned char uint8_t;
+#endif
+
 typedef enum
 {
-  E_34W539_NO_CD = 0,
-  E_34W539_CD_DETECTION = 1,
-  E_34W539_CD_IN_STOP = 2,
-  E_34W539_CD_BUSY = 3,
-  E_34W539_CD_PLAYING = 4,
-  E_34W539_CD_PAUSED = 5,
-  E_34W539_CD_FFWD = 6,
-  E_34W539_CD_REW = 7
-}_e_34w539status;
+  E_NO_CD = 0,
+  E_CD_DETECTION = 1,
+  E_CD_IN_STOP = 2,
+  E_CD_BUSY = 3,
+  E_CD_PLAYING = 4,
+  E_CD_PAUSED = 5,
+  E_CD_FFWD = 6,
+  E_CD_REW = 7
+}_e_cdstatus;
 
 typedef struct
 {
-  unsigned char first_folder;
-  unsigned char last_folder;
-  unsigned char total_folders;
-  unsigned char total_files;
-  unsigned char total_tracks;
-  unsigned char total_min;
-  unsigned char total_sec;
-  unsigned char current_folder;
-  unsigned char current_track;
-  unsigned char current_min;
-  unsigned char current_sec;
-  unsigned char track_name[32];
-  unsigned char artist_name[32];
-  unsigned char folder_name[32];
-  unsigned char file_name[32];
-  _e_34w539status current_status;
+  uint8_t first_folder;
+  uint8_t last_folder;
+  uint8_t total_folders;
+  uint8_t total_files;
+  uint8_t total_tracks;
+  uint8_t total_min;
+  uint8_t total_sec;
+  uint8_t current_folder;
+  uint8_t current_track;
+  uint8_t current_min;
+  uint8_t current_sec;
+  uint8_t track_name[32];
+  uint8_t artist_name[32];
+  uint8_t folder_name[32];
+  uint8_t file_name[32];
+  _e_cdstatus current_status;
   bool ismp3disk;
   bool israndomenabled;
 }_s_genericstatus;
@@ -82,7 +86,6 @@ DEBUG MACROS
 
 #endif
 
-
 /**********************************************
 Common Definitions
 **********************************************/
@@ -104,7 +107,6 @@ typedef struct
 }Msg_s;
 
 bool digitalHWSPIWrite(uint8_t sendchar, uint8_t *receivechar);
-inline bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar);
+bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar);
 
 #endif
-
