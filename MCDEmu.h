@@ -9,6 +9,33 @@ MCDEmu header file
 #include <stdbool.h>
 #include <stdint.h>
 
+
+/*WRAPPER*/
+//#define WRAPPER
+/*WRAPPER*/
+#ifdef WRAPPER
+#define OUTPUT 1
+#define INPUT 0
+#define pinMode(pin,mode) (mode==OUTPUT) ? (PI_GPIO_config(pin,BCM_GPIO_OUT)) : (PI_GPIO_config(pin,BCM_GPIO_IN))
+#define HIGH 1
+#define LOW 0
+#define digitalWriteFast(pin,mode) (mode==HIGH) ? (PI_GPIO_set_n(pin)) : (PI_GPIO_clr_n(pin))
+#define digitalReadFast(pin) PI_GPIO_lev_n(pin)
+#define _printf(arg, ...) printf(arg, ##__VA_ARGS__)
+#undef delay
+#define delay(x) usleep(x * 1000)
+#undef delayMicroseconds
+#define delayMicroseconds(x) usleep(x)
+#define millis() 0
+#else
+//#define pinMode(pin,mode)
+//#define digitalWriteFast(pin,mode)
+//#define digitalReadFast(pin) 0
+
+
+#define _printf(arg, ...) Serial.printf(arg, ##__VA_ARGS__)
+#endif
+
 extern bool log_verbose;
 
 #ifndef uint8_t
@@ -65,16 +92,16 @@ DEBUG MACROS
 #ifdef NDEBUG
 #define debug(M, ...)
 #else
-#define debug(M, ...) ((log_verbose == true) ? (Serial.printf("\nDEBUG (%u:%s:%d:) " M "\n", millis(), __FILENAME__, __LINE__, ##__VA_ARGS__)) : 0 )
+#define debug(M, ...) ((log_verbose == true) ? (_printf("\nDEBUG (%u:%s:%d:) " M "\n", millis(), __FILENAME__, __LINE__, ##__VA_ARGS__)) : 0 )
 #endif
 
 #define clean_errno() (errno == 0 ? "None" : strerror(errno))
 
-#define log_err(M, ...) Serial.printf("[ERROR] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
+#define log_err(M, ...) _printf("[ERROR] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
 
-#define log_warn(M, ...) Serial.printf("[WARN] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
+#define log_warn(M, ...) _printf("[WARN] (%s:%d: errno: %s) " M "\n", __FILENAME__, __LINE__, clean_errno(), ##__VA_ARGS__)
 
-#define log_info(M, ...) Serial.printf("[INFO] (%s:%d) " M "\n", __FILENAME__, __LINE__, ##__VA_ARGS__)
+#define log_info(M, ...) _printf("[INFO] (%s:%d) " M "\n", __FILENAME__, __LINE__, ##__VA_ARGS__)
 
 #define check(A, M, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
 

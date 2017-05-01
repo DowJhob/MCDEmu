@@ -2,23 +2,41 @@
 MCDEmu 34W515 header file
 *******/
 
-#include "Arduino.h"
 #include "MCDEmu.h"
+#ifndef WRAPPER
+#include "Arduino.h"
+#endif
 
 //debug spi
 #ifdef DEBUG_515
+#ifdef WRAPPER
+#define _STM_34W515_CS_PIN   15 //A1  //15
+#define DSTM_34W515_MISO_PIN 16 //A2  //16
+#define DMTS_34W515_MOSI_PIN 17 //A3  //17
+#define _SCK_34W515_CLK_PIN  18 //A4  //18
+#define _MTS_34W515_CS_PIN   19 //A5  //19
+#else
 #define _STM_34W515_CS_PIN    A1  //15
 #define DSTM_34W515_MISO_PIN  A2  //16
 #define DMTS_34W515_MOSI_PIN  A3  //17
 #define _SCK_34W515_CLK_PIN   A4  //18
 #define _MTS_34W515_CS_PIN    A5  //19
+#endif
 #else
 //SPI 34W515
+#ifdef WRAPPER
+#define _STM_34W515_CS_PIN    12 //SS    //10
+#define DSTM_34W515_MOSI_PIN  16 //MOSI  //11
+#define DMTS_34W515_MISO_PIN  25 //MISO  //12
+#define _SCK_34W515_CLK_PIN   20 //SCK   //13
+#define _MTS_34W515_CS_PIN    21 //A0    //14
+#else
 #define _STM_34W515_CS_PIN    SS    //10
 #define DSTM_34W515_MOSI_PIN  MOSI  //11
 #define DMTS_34W515_MISO_PIN  MISO  //12
 #define _SCK_34W515_CLK_PIN   SCK   //13
 #define _MTS_34W515_CS_PIN    A0    //14
+#endif
 #endif
 
 #define R_34W515_ACK MASTER_ACK

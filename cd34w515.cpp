@@ -15,20 +15,6 @@ const uint8_t randomDisableT_34W515[] = R_34W515_RANDOM_DISABLE_MSG;
 const uint8_t fastForwardT_34W515[] = R_34W515_FAST_FORWARD_MSG;
 const uint8_t rewindT_34W515[] = R_34W515_REWIND_MSG;
 
-const uint8_t sizeofinitT_34W515 = sizeof(initT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofdiskInfoT_34W515 = sizeof(diskInfoT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofdiskStructureT_34W515 = sizeof(diskStructureT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeoffolderStructureT_34W515 = sizeof(folderStructureT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofpreviousTrackT_34W515 = sizeof(previousTrackT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofejectDiskT_34W515 = sizeof(ejectDiskT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofrandomEnableT_34W515 = sizeof(randomEnableT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofrandomDisableT_34W515 = sizeof(randomDisableT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeoffastForwardT_34W515 = sizeof(fastForwardT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofrewindT_34W515 = sizeof(rewindT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofnextTrackT_34W515 = sizeof(nextTrackT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofpauseTrackT_34W515 = sizeof(pauseTrackT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofstopTrackT_34W515 = sizeof(stopTrackT_34W515) / sizeof(const uint8_t);
-const uint8_t sizeofplayTrackT_34W515 = sizeof(playTrackT_34W515) / sizeof(const uint8_t);
 
 cmdtx34w515_s tx34w515 = {false};
 cmdrx34w515_s rx34w515 = {false};
@@ -93,20 +79,20 @@ bool MCDEmu_slave_34W515(void)
 const Msg_s tx34w515Msg[]=
 {
   //34W515 COMMAND LIST      //MESSAGE TO SEND           //SIZE TO SEND
-  {&tx34w515.init ,             initT_34W515,               sizeofinitT_34W515},
-  {&tx34w515.ejectDisk ,        ejectDiskT_34W515,          sizeofejectDiskT_34W515},
-  {&tx34w515.stopTrack ,        stopTrackT_34W515,          sizeofstopTrackT_34W515},
-  {&tx34w515.pauseTrack ,       pauseTrackT_34W515,         sizeofpauseTrackT_34W515},
-  {&tx34w515.playTrack ,        playTrackT_34W515,          sizeofplayTrackT_34W515},
-  {&tx34w515.nextTrack ,        nextTrackT_34W515,          sizeofnextTrackT_34W515},
-  {&tx34w515.previousTrack ,    previousTrackT_34W515,      sizeofpreviousTrackT_34W515},
-  {&tx34w515.fastForward ,      fastForwardT_34W515,        sizeoffastForwardT_34W515},
-  {&tx34w515.rewind ,           rewindT_34W515,             sizeofrewindT_34W515},
-  {&tx34w515.diskInfo ,         diskInfoT_34W515,           sizeofdiskInfoT_34W515},
-  {&tx34w515.diskStructure ,    diskStructureT_34W515,      sizeofdiskStructureT_34W515},
-  {&tx34w515.folderStructure ,  folderStructureT_34W515,    sizeoffolderStructureT_34W515},
-  {&tx34w515.randomEnable ,     randomEnableT_34W515,       sizeofrandomEnableT_34W515},
-  {&tx34w515.randomDisable ,    randomDisableT_34W515,      sizeofrandomDisableT_34W515}
+  {&tx34w515.init ,             initT_34W515,               sizeof(initT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.ejectDisk ,        ejectDiskT_34W515,          sizeof(ejectDiskT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.stopTrack ,        stopTrackT_34W515,          sizeof(stopTrackT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.pauseTrack ,       pauseTrackT_34W515,         sizeof(pauseTrackT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.playTrack ,        playTrackT_34W515,          sizeof(playTrackT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.nextTrack ,        nextTrackT_34W515,          sizeof(nextTrackT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.previousTrack ,    previousTrackT_34W515,      sizeof(previousTrackT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.fastForward ,      fastForwardT_34W515,        sizeof(fastForwardT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.rewind ,           rewindT_34W515,             sizeof(rewindT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.diskInfo ,         diskInfoT_34W515,           sizeof(diskInfoT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.diskStructure ,    diskStructureT_34W515,      sizeof(diskStructureT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.folderStructure ,  folderStructureT_34W515,    sizeof(folderStructureT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.randomEnable ,     randomEnableT_34W515,       sizeof(randomEnableT_34W515) / sizeof(const uint8_t)},
+  {&tx34w515.randomDisable ,    randomDisableT_34W515,      sizeof(randomDisableT_34W515) / sizeof(const uint8_t)}
 };
 const uint8_t sizeoftx34w515Msg = sizeof(tx34w515Msg)/sizeof(Msg_s);
 
@@ -138,18 +124,18 @@ bool MCDEmu_master_34W515_tx(void)
           break;
         }
         // no error
-        if(i == 0) ((log_verbose == true) ? (Serial.printf(">")) : 0);
+        if(i == 0) ((log_verbose == true) ? (_printf(">")) : 0);
         // last message
         if(i != (ptxMsg->size - 1))
         {
           // 2ms between each byte
           delay(2);
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", i, sendchar)) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X ", i, sendchar)) : 0);
         }
         else
         {
           *ptxMsg->cmd = false;
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X\n", i, sendchar)) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X\n", i, sendchar)) : 0);
           break;
         }
       }
@@ -192,9 +178,9 @@ bool MCDEmu_master_34W515_rx(void)
         receiveenable = false;
         for(receivecnt = 0; receivecnt <= T_34W515_MAX_SIZE_TO_RECEIVE; receivecnt++)
         {
-          if(receivecnt == 0) ((log_verbose == true) ? (Serial.printf("<")) : 0);
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
-          if(receivecnt == T_34W515_MAX_SIZE_TO_RECEIVE) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
+          if(receivecnt == 0) ((log_verbose == true) ? (_printf("<")) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
+          if(receivecnt == T_34W515_MAX_SIZE_TO_RECEIVE) ((log_verbose == true) ? (_printf("\n")) : 0);
         }
       }
       else

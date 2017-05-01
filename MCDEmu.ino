@@ -12,8 +12,19 @@
   (3) Protocol handling : generic layer to connect the pipes
   (4) 34W539 Master protocol emulator : behaves as a standard Chrysler HU for the 34W539 CD drive
 
-  2016 - johnbutol
+  2017 - johnbutol
 */
+
+#include "MCDEmu.h"
+
+/*WRAPPER*/
+#ifdef WRAPPER
+#include <stdio.h>
+#include <ctype.h>
+#include <unistd.h>
+#include "PI_SPI_config.h"
+/*WRAPPER*/
+#else
 
 //For debug purposes
 //#include <Debug.h>
@@ -22,12 +33,25 @@
 
 // include the SPI library:
 #include <SPI.h>
+#endif
+/*WRAPPER*/
 
 #include "cd34w539.h"
 #include "cd34w515.h"
-#include "MCDEmu.h"
 
 //OTHER SIGNALS
+#ifdef WRAPPER
+// set pin 6 as the mute:
+#define _MUTE_34W539_PIN 17
+// set pin 7 as the cd detect:
+#define DDCNT_34W539_PIN 22
+// set pin 8 as the mute:
+#define _MUTE_34W515_PIN 23
+// set pin 9 as the cd detect:
+#define DDCNT_34W515_PIN 24
+/*WRAPPER*/
+#else
+
 // set pin 6 as the mute:
 #define _MUTE_34W539_PIN 6
 // set pin 7 as the cd detect:
@@ -39,8 +63,21 @@
 
 // set up the speed, mode and endianness of each device
 SPISettings settingsHWSPI(250000, LSBFIRST, SPI_MODE3);
+#endif
+/*WRAPPER*/
 
-bool log_verbose = false;
+
+bool log_verbose = true;
+
+/*WRAPPER*/
+#ifdef WRAPPER
+
+void printVersion(void);
+void printHelp(void);
+bool MCDEmu_generic_commands(void);
+
+#endif
+/*WRAPPER*/
 
 /**********************************************
 SETUP
@@ -80,11 +117,15 @@ void setup()
    // set the _MUTE_34W539 as an input:
   pinMode(_MUTE_34W539_PIN, INPUT);
 
+/*WRAPPER*/
+#ifndef WRAPPER
    // initialize SPI:
   SPI.begin();
 
   //for debug purposes
   Serial.begin(57600);
+#endif
+/*WRAPPER*/
 
     //debug spi
 #ifdef DEBUG_515
@@ -107,7 +148,11 @@ void setup()
   digitalWriteFast(DDCNT_34W515_PIN, HIGH);
   digitalWriteFast(_MUTE_34W515_PIN, HIGH);
 
+/*WRAPPER*/
+#ifndef WRAPPER
   delay(1000);
+#endif
+/*WRAPPER*/
 
   printVersion();
   printHelp();
@@ -134,7 +179,7 @@ const char compile_date[] = __DATE__ " " __TIME__;
 
 void printVersion(void)
 {
-  Serial.printf("MCDEmu - %s\n", compile_date);
+  _printf("%s - %s\n", __FILENAME__, compile_date);
 }
 
 const serialtx_s serialtxcommon[]=
@@ -241,10 +286,10 @@ void printHelp(void)
 
   for(i = 0; i < sizeofserialtabletop; i++)
   {
-    Serial.printf("List of available commands for module %s (%c)\n", pserialtabletop->infoMsg, pserialtabletop->cmd);
+    _printf("List of available commands for module %s (%c)\n", pserialtabletop->infoMsg, pserialtabletop->cmd);
     while(1)
     {
-      Serial.printf("%c - %s\n", pserialtx->cmd, pserialtx->infoMsg);
+      _printf("%c - %s\n", pserialtx->cmd, pserialtx->infoMsg);
       pserialtx++;
       if(pserialtx->cmd == 0) break;
     }
@@ -253,7 +298,7 @@ void printHelp(void)
   }
 }
 
-void serialEvent()
+void serialEvent(void)
 {
   uint8_t i;
   const serialtable_s *pserialtabletop;
@@ -268,7 +313,7 @@ void serialEvent()
     {
       if(pserialtx->cmd == receivedChar)
       {
-          Serial.printf(">%s\n", pserialtx->infoMsg);
+          _printf(">%s\n", pserialtx->infoMsg);
           if(pserialtx->cmdEvent != NULL)
           {
             *pserialtx->cmdEvent = true;
@@ -380,16 +425,16 @@ bool MCDEmu_generic_serial_cmd(void)
         break;
       }
       //no error
-      if(i == 0) Serial.printf(">");
+      if(i == 0) _printf(">");
       // 2ms between each byte
       if(i != (size - 1))
       {
         delay(2);
-        Serial.printf("%d:0x%02X ", i, sendchar);
+        _printf("%d:0x%02X ", i, sendchar);
       }
       else
       {
-        Serial.printf("%d:0x%02X\n", i, sendchar);
+        _printf("%d:0x%02X\n", i, sendchar);
       }
     }
   }
@@ -397,7 +442,7 @@ bool MCDEmu_generic_serial_cmd(void)
   {
     tx34w539.debug = false;
     log_verbose = !log_verbose;
-    Serial.printf("<VERBOSE\t %d\n", log_verbose);
+    _printf("<VERBOSE\t %d\n", log_verbose);
   }
   return error;
 }
@@ -432,6 +477,11 @@ Software SPI Transfer
 #define TIMEOUT_96MHZ_CS (TIMEOUT_72MHZ_CS * 2)
 #define TIMEOUT_96MHZ_CLK (TIMEOUT_72MHZ_CLK * 2)
 
+/*WRAPPER*/
+#ifdef WRAPPER
+#define TIMEOUT_CS TIMEOUT_96MHZ_CS
+#define TIMEOUT_CLK TIMEOUT_96MHZ_CLK
+#else
 #if F_CPU < 48000000
 #define TIMEOUT_CS TIMEOUT_24MHZ_CS
 #define TIMEOUT_CLK TIMEOUT_24MHZ_CLK
@@ -445,6 +495,8 @@ Software SPI Transfer
 #define TIMEOUT_CS TIMEOUT_96MHZ_CS
 #define TIMEOUT_CLK TIMEOUT_96MHZ_CLK
 #endif
+#endif
+/*WRAPPER*/
 
 bool digitalSWSPITransfer(uint8_t sendchar, uint8_t *receivechar)
 {

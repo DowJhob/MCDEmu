@@ -1,17 +1,25 @@
 /*******
 MCDEmu 34W539 header file
 *******/
-#include "Arduino.h"
 #include "MCDEmu.h"
-
+#ifndef WRAPPER
+#include "Arduino.h"
+#endif
 
 //SPI 34W539
+#ifdef WRAPPER
+#define _STM_34W539_CS_PIN   13 //A1  //15
+#define DSTM_34W539_MISO_PIN 19 //A2  //16
+#define DMTS_34W539_MOSI_PIN 6 //A3  //17
+#define _SCK_34W539_CLK_PIN  26 //A4  //18
+#define _MTS_34W539_CS_PIN   5 //A5  //19
+#else
 #define _STM_34W539_CS_PIN    A1  //15
 #define DSTM_34W539_MISO_PIN  A2  //16
 #define DMTS_34W539_MOSI_PIN  A3  //17
 #define _SCK_34W539_CLK_PIN   A4  //18
 #define _MTS_34W539_CS_PIN    A5  //19
-
+#endif
 /**********************************************
 Chrysler CD drive (34W539) Transmit Definitions
 **********************************************/

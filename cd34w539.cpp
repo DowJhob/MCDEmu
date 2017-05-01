@@ -1,5 +1,10 @@
 #include "cd34w539.h"
 
+#ifdef WRAPPER
+#include "PI_SPI_config.h"
+#include <unistd.h>
+#endif
+
 const uint8_t initT_34W539[] = R_34W539_UNKNOWN_1ST_MSG;
 const uint8_t diskInfoT_34W539[] = R_34W539_DISKINFO_MSG;
 const uint8_t previousTrackT_34W539[] = R_34W539_PREVIOUS_TRACK_MSG;
@@ -21,26 +26,6 @@ const uint8_t randomDisableT_34W539[] = R_34W539_RANDOM_DISABLE_MSG;
 const uint8_t fastForwardT_34W539[] = R_34W539_FAST_FORWARD_MSG;
 const uint8_t rewindT_34W539[] = R_34W539_REWIND_MSG;
 
-const uint8_t sizeofinitT_34W539 = sizeof(initT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofdiskInfoT_34W539 = sizeof(diskInfoT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofdiskStructureT_34W539 = sizeof(diskStructureT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeoffolderStructureT_34W539 = sizeof(folderStructureT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofpreviousTrackT_34W539 = sizeof(previousTrackT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofmetaDirNameT_34W539 = sizeof(metaDirNameT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofejectDiskT_34W539 = sizeof(ejectDiskT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofrandomEnableT_34W539 = sizeof(randomEnableT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofrandomDisableT_34W539 = sizeof(randomDisableT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeoffastForwardT_34W539 = sizeof(fastForwardT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofrewindT_34W539 = sizeof(rewindT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofpreviousDirectoryT_34W539 = sizeof(previousDirectoryT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofnextDirectoryT_34W539 = sizeof(nextDirectoryT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofnextTrackT_34W539 = sizeof(nextTrackT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofpauseTrackT_34W539 = sizeof(pauseTrackT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofstopTrackT_34W539 = sizeof(stopTrackT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofmetaFileNameT_34W539 = sizeof(metaFileNameT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofplayTrackT_34W539 = sizeof(playTrackT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofmetaArtNameT_34W539 = sizeof(metaArtNameT_34W539) / sizeof(const uint8_t);
-const uint8_t sizeofmetaTrackNameT_34W539 = sizeof(metaTrackNameT_34W539) / sizeof(const uint8_t);
 
 cmdtx34w539_s tx34w539 = {false};
 
@@ -50,26 +35,26 @@ cmdtx34w539_s tx34w539 = {false};
 const Msg_s tx34w539Msg[]=
 {
   //34W539 COMMAND LIST      //MESSAGE TO SEND           //SIZE TO SEND
-  {&tx34w539.init ,             initT_34W539,               sizeofinitT_34W539},
-  {&tx34w539.ejectDisk ,        ejectDiskT_34W539,          sizeofejectDiskT_34W539},
-  {&tx34w539.stopTrack ,        stopTrackT_34W539,          sizeofstopTrackT_34W539},
-  {&tx34w539.pauseTrack ,       pauseTrackT_34W539,         sizeofpauseTrackT_34W539},
-  {&tx34w539.playTrack ,        playTrackT_34W539,          sizeofplayTrackT_34W539},
-  {&tx34w539.nextTrack ,        nextTrackT_34W539,          sizeofnextTrackT_34W539},
-  {&tx34w539.previousTrack ,    previousTrackT_34W539,      sizeofpreviousTrackT_34W539},
-  {&tx34w539.fastForward ,      fastForwardT_34W539,        sizeoffastForwardT_34W539},
-  {&tx34w539.rewind ,           rewindT_34W539,             sizeofrewindT_34W539},
-  {&tx34w539.diskInfo ,         diskInfoT_34W539,           sizeofdiskInfoT_34W539},
-  {&tx34w539.diskStructure ,    diskStructureT_34W539,      sizeofdiskStructureT_34W539},
-  {&tx34w539.folderStructure ,  folderStructureT_34W539,    sizeoffolderStructureT_34W539},
-  {&tx34w539.randomEnable ,     randomEnableT_34W539,       sizeofrandomEnableT_34W539},
-  {&tx34w539.randomDisable ,    randomDisableT_34W539,      sizeofrandomDisableT_34W539},
-  {&tx34w539.metaDirName ,      metaDirNameT_34W539,        sizeofmetaDirNameT_34W539},
-  {&tx34w539.metaArtName ,      metaArtNameT_34W539,        sizeofmetaArtNameT_34W539},
-  {&tx34w539.metaTrackName ,    metaTrackNameT_34W539,      sizeofmetaTrackNameT_34W539},
-  {&tx34w539.metaFileName ,     metaFileNameT_34W539,       sizeofmetaFileNameT_34W539},
-  {&tx34w539.nextDirectory ,    nextDirectoryT_34W539,      sizeofnextDirectoryT_34W539},
-  {&tx34w539.previousDirectory, previousDirectoryT_34W539,  sizeofpreviousDirectoryT_34W539}
+  {&tx34w539.init ,             initT_34W539,               sizeof(initT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.ejectDisk ,        ejectDiskT_34W539,          sizeof(ejectDiskT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.stopTrack ,        stopTrackT_34W539,          sizeof(stopTrackT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.pauseTrack ,       pauseTrackT_34W539,         sizeof(pauseTrackT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.playTrack ,        playTrackT_34W539,          sizeof(playTrackT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.nextTrack ,        nextTrackT_34W539,          sizeof(nextTrackT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.previousTrack ,    previousTrackT_34W539,      sizeof(previousTrackT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.fastForward ,      fastForwardT_34W539,        sizeof(fastForwardT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.rewind ,           rewindT_34W539,             sizeof(rewindT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.diskInfo ,         diskInfoT_34W539,           sizeof(diskInfoT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.diskStructure ,    diskStructureT_34W539,      sizeof(diskStructureT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.folderStructure ,  folderStructureT_34W539,    sizeof(folderStructureT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.randomEnable ,     randomEnableT_34W539,       sizeof(randomEnableT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.randomDisable ,    randomDisableT_34W539,      sizeof(randomDisableT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.metaDirName ,      metaDirNameT_34W539,        sizeof(metaDirNameT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.metaArtName ,      metaArtNameT_34W539,        sizeof(metaArtNameT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.metaTrackName ,    metaTrackNameT_34W539,      sizeof(metaTrackNameT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.metaFileName ,     metaFileNameT_34W539,       sizeof(metaFileNameT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.nextDirectory ,    nextDirectoryT_34W539,      sizeof(nextDirectoryT_34W539) / sizeof(const uint8_t)},
+  {&tx34w539.previousDirectory, previousDirectoryT_34W539,  sizeof(previousDirectoryT_34W539) / sizeof(const uint8_t)}
 };
 const uint8_t sizeoftx34w539Msg = sizeof(tx34w539Msg)/sizeof(Msg_s);
 
@@ -105,18 +90,18 @@ bool MCDEmu_master_34W539_tx(void)
           break;
         }
         // no error
-        if(i == 0) ((log_verbose == true) ? (Serial.printf(">")) : 0);
+        if(i == 0) ((log_verbose == true) ? (_printf(">")) : 0);
         // last message
         if(i != (ptxMsg->size - 1))
         {
           // 2ms between each byte
           delay(2);
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", i, sendchar)) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X ", i, sendchar)) : 0);
         }
         else
         {
           *ptxMsg->cmd = false;
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X\n", i, sendchar)) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X\n", i, sendchar)) : 0);
           break;
         }
       }
@@ -295,13 +280,13 @@ bool MCDEmu_master_34W539_rx(void)
 
           if(receivecnt >= T_34W539_METADATA_BYTE_9_CHAR_0)
           {
-            if(receivecnt == T_34W539_METADATA_BYTE_9_CHAR_0) Serial.printf("<");
-            Serial.printf("%c", receivedchars[receivecnt]);
-            if(receivecnt == receivesize) Serial.printf("\n");
+            if(receivecnt == T_34W539_METADATA_BYTE_9_CHAR_0) _printf("<");
+            _printf("%c", receivedchars[receivecnt]);
+            if(receivecnt == receivesize) _printf("\n");
           }
           if(receivesize == T_34W539_SIZE_METADATA_NOK - 1)
           {
-            Serial.printf("<NO METADATA\n");
+            _printf("<NO METADATA\n");
           }
           break;
         }
@@ -332,9 +317,9 @@ bool MCDEmu_master_34W539_rx(void)
         receiveenable = false;
         for(receivecnt = 0; receivecnt <= receivesize; receivecnt++)
         {
-          if(receivecnt == 0) ((log_verbose == true) ? (Serial.printf("<")) : 0);
-          ((log_verbose == true) ? (Serial.printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
-          if(receivecnt == receivesize) ((log_verbose == true) ? (Serial.printf("\n")) : 0);
+          if(receivecnt == 0) ((log_verbose == true) ? (_printf("<")) : 0);
+          ((log_verbose == true) ? (_printf("%d:0x%02X ", receivecnt, receivedchars[receivecnt])) : 0);
+          if(receivecnt == receivesize) ((log_verbose == true) ? (_printf("\n")) : 0);
         }
         error = MCDEmu_master_34W539_status_update(receivedchars);
       }
