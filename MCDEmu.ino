@@ -165,12 +165,15 @@ void loop()
 {
   bool error = false;
 #ifdef DEBUG_515
+  //to thread 1
   error = MCDEmu_master_34W515();
 #else
   error = MCDEmu_slave_34W515();
 #endif
+  //to thread 2
   if(error == false)
   error = MCDEmu_generic_commands();
+  //to thread 3
   if(error == false)
   error = MCDEmu_master_34W539();
 }
